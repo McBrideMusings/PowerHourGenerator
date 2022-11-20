@@ -19,7 +19,7 @@ def main(input_path: str, output_name: str, verbose=False):
     for song in songs:
         if verbose:
             print(f"Song Parsed: {song} ")
-        video_processor.download_song(config, song)
+    video_processor.download_song(config, songs[0])
 
 
 # Put IDE Debug stuff here

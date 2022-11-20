@@ -1,0 +1,4 @@
+ffmpeg -i Heybaby.NoDoubt.mp4 -vf "drawtext=text='My text starting at 640x360':x=640:y=360:fontsize=24:fontcolor=white" -c:a copy output2.mp4
+ffmpeg -i Heybaby.NoDoubt.mp4 -vf "drawtext=text='My text starting at 640x360':x=640:y=360:fontsize=24:fontcolor=white:x=100:y=x/dar:enable=lt(mod(t\,3)\,1)" -c:a copy output.mp4
+ffmpeg -y -i Heybaby.NoDoubt.mp4 -filter_complex "drawtext=text='TITLE TEXT': x=(w-text_h)/2: y=(h-text_h)/2: fontsize=32: fontcolor=white: box=1: boxcolor=white@0.07: boxborderw=5:x=if(eq(mod(n\,1200)\,0)\,rand(0\,(w-text_w))\,x):y=if(eq(mod(n\,1200)\,0)\,rand(0\,(h-text_h))\,y):enable=gt(t\,5)" -c:v libx264 -crf 17 -c:a copy output.mp4
+ffmpeg -i Heybaby.NoDoubt.mp4 -vf "drawtext=text='My text starting at 640x360':x=640:y=360:fontsize=24:fontcolor=white:enable=gt(t\,5)" -c:a copy output2.mp4
