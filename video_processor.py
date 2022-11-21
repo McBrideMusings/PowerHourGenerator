@@ -26,7 +26,7 @@ def download_song(config: PowerHourConfig, song: PowerHourSong):
     return v_path, a_path
 
 
-def process_media(config: PowerHourConfig, song: PowerHourSong, vid_path: str, aud_path: str):
+def process_media(config: PowerHourConfig, song: PowerHourSong, vid_path: str, aud_path: str, remove : bool = True):
     dir_path, file_path = get_paths(config, song)
     audio = ffmpeg.input(aud_path)
     video = ffmpeg.input(vid_path)
@@ -38,7 +38,7 @@ def process_media(config: PowerHourConfig, song: PowerHourSong, vid_path: str, a
     #'
     vid = (
         video
-        .drawtext(text="No Doubt",x=640,y=360, fontsize=64, fontcolor='white',enable=f'between(t,{text_start_time},{text_end_time})')
+        .drawtext(text="No Doubt",x=0,y=360, fontsize=64, fontcolor='white',enable=f'between(t,{text_start_time},{text_end_time})')
         .trim(start=song.start_time, end=end_time)
         .filter('fade', type="in", start_time=song.start_time, duration=config.fade_duration)
         .filter('fade', type="out", start_time=fade_end_start_time, duration=config.fade_duration)
@@ -55,8 +55,9 @@ def process_media(config: PowerHourConfig, song: PowerHourSong, vid_path: str, a
     command = ffmpeg.output(vid, aud, file_path)
     # ffmpeg.output(audio, video, file_path).run(overwrite_output=True)cc
     command.run(overwrite_output=True)
-    os.remove(vid_path)
-    os.remove(aud_path)
+    if remove:
+        os.remove(vid_path)
+        os.remove(aud_path)
 
 
 def get_dir_path(config: PowerHourConfig):

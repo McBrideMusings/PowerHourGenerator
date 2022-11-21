@@ -4,6 +4,8 @@ import list_processor
 import video_processor
 from powerhour import PowerHourConfig
 
+test_import_csv : str = "test_import.csv"
+test_folder : str = "test"
 
 def parse_args(argv):
     parser = argparse.ArgumentParser()
@@ -24,4 +26,19 @@ def main(input_path: str, output_name: str, verbose=False):
 
 # Put IDE Debug stuff here
 if __name__ == "__main__":
-    main("test_import.csv", "test", True)
+    if os.getenv("DOWNLOAD_ONLY") is not None:
+        print(f"DOWNLOAD_ONLY")
+        songs = list_processor.parse_list(test_import_csv)
+        config = PowerHourConfig(test_folder)
+        vid_path, aud_path = video_processor.download_song(config, songs[0])
+    elif os.getenv("PROCESS_ONLY") is not None:
+        print(f"PROCESS_ONLY")
+        songs = list_processor.parse_list(test_import_csv)
+        config = PowerHourConfig(test_folder)
+        valid, vid_path, aud_path = video_processor.validate_existing_files(config, songs[0])
+        if valid:
+            video_processor.process_media(config, songs[0], vid_path, aud_path, False)
+        else:
+            print("video or audio path does not exist, download_only first")
+    else:
+        main(test_import_csv, test_folder, True)
