@@ -1,10 +1,17 @@
 import os
 import ffmpeg
+import math
 from pytube import YouTube, StreamQuery
-from powerhour import PowerHourSong, PowerHourConfig
+from powerhour import PowerHourSong, PowerHourConfig, Vec2D
 
 video_tmp_filename = "video.mp4"
 audio_tmp_filename = "audio.mp3"
+
+text_padding = '10'
+song_title_pos = VideoPos(x=f'{text_padding}',y=f'h-th-{}')
+song_title_x = '0'
+song_title_y = 'h-th'
+song_number_x = x=w-tw-10:y=h-th-10
 
 def download_song(config: PowerHourConfig, song: PowerHourSong):
     print(f"Starting Download {song.title} by {song.artist}")
@@ -35,10 +42,12 @@ def process_media(config: PowerHourConfig, song: PowerHourSong, vid_path: str, a
     text_start_fade_time = song.start_time + 5
     text_end_time = text_start_time + 5
     fade_end_start_time = end_time - config.fade_duration
-    #'
+    font_color = "white"
+    enable_expr = f'between(t,{text_start_time},{text_end_time})'
+
     vid = (
         video
-        .drawtext(text="No Doubt",x=0,y=360, fontsize=64, fontcolor='white',enable=f'between(t,{text_start_time},{text_end_time})')
+        .drawtext(text="No Doubt", x=0, y='h-th', fontsize=64, fontcolor=font_color, enable=enable_expr)
         .trim(start=song.start_time, end=end_time)
         .filter('fade', type="in", start_time=song.start_time, duration=config.fade_duration)
         .filter('fade', type="out", start_time=fade_end_start_time, duration=config.fade_duration)
