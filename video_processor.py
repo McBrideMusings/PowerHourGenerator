@@ -1,17 +1,14 @@
 import os
 import ffmpeg
-import math
 from pytube import YouTube, StreamQuery
-from powerhour import PowerHourSong, PowerHourConfig, Vec2D
+from powerhour import *
 
 video_tmp_filename = "video.mp4"
 audio_tmp_filename = "audio.mp3"
 
-text_padding = '10'
-song_title_pos = VideoPos(x=f'{text_padding}',y=f'h-th-{}')
-song_title_x = '0'
-song_title_y = 'h-th'
-song_number_x = x=w-tw-10:y=h-th-10
+song_title_pos = VideoPos(anchor=PosAnchor.BOTTOM_LEFT, padding=100)
+song_number_pos = VideoPos(anchor=PosAnchor.BOTTOM_RIGHT, padding=100)
+
 
 def download_song(config: PowerHourConfig, song: PowerHourSong):
     print(f"Starting Download {song.title} by {song.artist}")
@@ -33,31 +30,50 @@ def download_song(config: PowerHourConfig, song: PowerHourSong):
     return v_path, a_path
 
 
-def process_media(config: PowerHourConfig, song: PowerHourSong, vid_path: str, aud_path: str, remove : bool = True):
+def process_media(config: PowerHourConfig, song: PowerHourSong, song_num: int, vid_path: str, aud_path: str,
+                  remove: bool = True):
     dir_path, file_path = get_paths(config, song)
     audio = ffmpeg.input(aud_path)
     video = ffmpeg.input(vid_path)
-    end_time = song.start_time + 60
-    text_start_time = song.start_time + 2
-    text_start_fade_time = song.start_time + 5
-    text_end_time = text_start_time + 5
-    fade_end_start_time = end_time - config.fade_duration
-    font_color = "white"
+
+    # dynamic values determined by both song and config params
+    text_start_time = song.start_time + config.title_start_time
+    text_end_time = song.start_time + config.title_duration
+    fade_out_start_time = song.end_time - config.fade_duration
     enable_expr = f'between(t,{text_start_time},{text_end_time})'
 
     vid = (
         video
-        .drawtext(text="No Doubt", x=0, y='h-th', fontsize=64, fontcolor=font_color, enable=enable_expr)
-        .trim(start=song.start_time, end=end_time)
+        .drawtext(text=song.artist, x=song_title_pos.get_x_expr(), y=song_title_pos.get_y_expr(),
+                  enable=enable_expr,
+                  fontfile=config.font_file,
+                  fontsize=config.artist_font_size,
+                  fontcolor=config.font_color,
+                  bordercolor=config.font_border_color,
+                  borderw=config.font_border_width)
+        .drawtext(text=song.title, x=song_title_pos.get_x_expr(), y=song_title_pos.get_y_expr(config.artist_font_size * 1.2),
+                  enable=enable_expr,
+                  fontfile=config.font_file,
+                  fontsize=config.title_font_size,
+                  fontcolor=config.font_color,
+                  bordercolor=config.font_border_color,
+                  borderw=config.font_border_width)
+        .drawtext(text=song_num, x=song_number_pos.get_x_expr(), y=song_number_pos.get_y_expr(),
+                  fontfile=config.font_file,
+                  fontsize=config.number_font_size,
+                  fontcolor=config.font_color,
+                  bordercolor=config.font_border_color,
+                  borderw=config.font_border_width)
+        .trim(start=song.start_time, end=song.end_time)
         .filter('fade', type="in", start_time=song.start_time, duration=config.fade_duration)
-        .filter('fade', type="out", start_time=fade_end_start_time, duration=config.fade_duration)
+        .filter('fade', type="out", start_time=fade_out_start_time, duration=config.fade_duration)
         .setpts('PTS-STARTPTS')
     )
     aud = (
         audio
-        .filter_('atrim', start=song.start_time, end=end_time)
+        .filter_('atrim', start=song.start_time, end=song.end_time)
         .filter('afade', type="in", start_time=song.start_time, duration=config.fade_duration)
-        .filter('afade', type="out", start_time=fade_end_start_time, duration=config.fade_duration)
+        .filter('afade', type="out", start_time=fade_out_start_time, duration=config.fade_duration)
         .filter_('asetpts', 'PTS-STARTPTS')
     )
     print("outputting")
@@ -95,7 +111,5 @@ def validate_existing_files(config: PowerHourConfig, song: PowerHourSong):
         return False
 
 
-def get_highest_resolution(stream : StreamQuery):
+def get_highest_resolution(stream: StreamQuery):
     return stream.filter(adaptive=True).order_by("resolution").last()
-
-
