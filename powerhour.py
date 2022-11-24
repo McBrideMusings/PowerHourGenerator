@@ -6,6 +6,7 @@ class PowerHourConfig:
 
     def __init__(self,
                  project_name: str,
+                 interstitial_path: str,
                  fade_duration: float = 0.5,
                  text_padding: float = 100,
                  text_padding_x: float = -1,
@@ -19,6 +20,7 @@ class PowerHourConfig:
                  title_duration: float = 5,
                  interstitial_text: str = "Drink!"):
         self.project_name = project_name
+        self.interstitial_path = interstitial_path
         self.fade_duration = fade_duration
         self.text_padding_x = text_padding_x if text_padding_x >= 0 else text_padding
         self.text_padding_y = text_padding_y if text_padding_y >= 0 else text_padding
@@ -49,8 +51,12 @@ class PowerHourSong:
     def __str__(self):
         return "SongChoice({}, {}, {}, {})".format(self.title, self.artist, self.start_time, self.link)
 
-    def get_filename(self, file_ending: str = "mp4"):
-        return "{}.{}.{}".format(self.title.replace(' ', ''), self.artist.replace(' ', ''), file_ending)
+    def get_filename(self, file_ending: str = "mp4", *extras: str):
+        filename = f"{self.title.replace(' ', '')}.{self.artist.replace(' ', '')}"
+        if len(extras) > 0:
+            for extra in extras:
+                filename = f"{filename}.{extra}"
+        return filename + f".{file_ending}"
 
 
 class PosAnchor(Enum):

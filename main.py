@@ -5,6 +5,7 @@ import video_processor
 from powerhour import PowerHourConfig
 
 test_import_csv: str = "test_import.csv"
+test_import_tsv: str = "test_import.tsv"
 test_folder: str = "test"
 
 
@@ -27,19 +28,22 @@ def main(input_path: str, output_name: str, verbose=False):
 
 # Put IDE Debug stuff here
 if __name__ == "__main__":
-    if os.getenv("DOWNLOAD_ONLY") is not None:
-        print(f"DOWNLOAD_ONLY")
-        songs = list_processor.parse_list(test_import_csv)
+    if os.getenv("PARSE_ONLY") is not None:
+        print(f"PARSE_ONLY")
+        songs = list_processor.parse_list(test_import_tsv)
         config = PowerHourConfig(test_folder)
-        vid_path, aud_path = video_processor.download_song(config, songs[0])
+    elif os.getenv("DOWNLOAD_ONLY") is not None:
+        print(f"DOWNLOAD_ONLY")
+        songs = list_processor.parse_list(test_import_tsv)
+        config = PowerHourConfig(test_folder)
+        vid_path = video_processor.download_song(config, songs[0], False)
     elif os.getenv("PROCESS_ONLY") is not None:
         print(f"PROCESS_ONLY")
-        songs = list_processor.parse_list(test_import_csv)
+        songs = list_processor.parse_list(test_import_tsv)
         config = PowerHourConfig(test_folder, text_padding_x=100, text_padding_y=80)
-        valid, vid_path, aud_path = video_processor.validate_existing_files(config, songs[0])
-        if valid:
-            video_processor.process_song(config, songs[0], 1, vid_path, aud_path, False)
-        else:
-            print("video or audio path does not exist, download_only first")
     else:
+        # TODO SONG LIMIT CONFIG
+        song_limit = -1
+        if os.getenv("SONG_LIMIT") is not None:
+            song_limit = os.getenv("SONG_LIMIT")
         main(test_import_csv, test_folder, True)

@@ -7,13 +7,13 @@ greater than and less than
 ffmpeg -i Heybaby.NoDoubt.mp4 -vf "drawtext=text='My text starting at 640x360':x=640:y=360:fontsize=24:fontcolor=white:enable=between(1, 0, 5)" -c:a copy output23.mp4
 
 
-    DS = 1.0  # display start
-    DE = 10.0  # display end
-    FID = 1.5  # fade in duration
-    FOD = 5  # fade out duration
-    text_expr = r"ff0000%{eif\\\\: clip(255*(1*between(t\\, $DS + $FID\\, $DE - $FOD) + ((t - $DS)/$FID)*between(t\\, $DS\\, $DS + $FID) + (-(t - $DE)/$FOD)*between(t\\, $DE - $FOD\\, $DE) )\\, 0\\, 255) \\\\: x\\\\: 2 }"
-    text_expr.replace("$DS", str(DS))
-    text_expr.replace("$DE", str(DE))
-    text_expr.replace("$FID", str(FID))
-    text_expr.replace("$FOD", str(FID))
-    print(text_expr)
+DS = 1.0  # display start
+DE = 10.0  # display end
+FID = 1.5  # fade in duration
+FOD = 5  # fade out duration
+text_expr = r"ff0000%{eif\\\\: clip(255*(1*between(t\\, $DS + $FID\\, $DE - $FOD) + ((t - $DS)/$FID)*between(t\\, $DS\\, $DS + $FID) + (-(t - $DE)/$FOD)*between(t\\, $DE - $FOD\\, $DE) )\\, 0\\, 255) \\\\: x\\\\: 2 }"
+text_expr.replace("$DS", str(DS))
+text_expr.replace("$DE", str(DE))
+text_expr.replace("$FID", str(FID))
+text_expr.replace("$FOD", str(FID))
+print(text_expr)
