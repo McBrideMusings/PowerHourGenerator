@@ -1,14 +1,17 @@
 import os
 import ffmpeg
+import pathlib
+import subprocess
 from pytube import YouTube, StreamQuery
 from powerhour import *
 
+interstitial_filename = "interstitial"
 video_tmp_filename = "video.mp4"
 audio_tmp_filename = "audio.mp3"
 
 song_title_pos = VideoPos(anchor=PosAnchor.BOTTOM_LEFT, padding=100)
 song_number_pos = VideoPos(anchor=PosAnchor.BOTTOM_RIGHT, padding=100)
-
+interstitial_text_pos = VideoPos(anchor=PosAnchor.BOTTOM_CENTER, padding=100)
 
 def download_song(config: PowerHourConfig, song: PowerHourSong):
     print(f"Starting Download {song.title} by {song.artist}")
@@ -30,8 +33,8 @@ def download_song(config: PowerHourConfig, song: PowerHourSong):
     return v_path, a_path
 
 
-def process_media(config: PowerHourConfig, song: PowerHourSong, song_num: int, vid_path: str, aud_path: str,
-                  remove: bool = True):
+def process_song(config: PowerHourConfig, song: PowerHourSong, song_num: int, vid_path: str, aud_path: str,
+                 remove: bool = True):
     dir_path, file_path = get_paths(config, song)
     audio = ffmpeg.input(aud_path)
     video = ffmpeg.input(vid_path)
@@ -85,9 +88,60 @@ def process_media(config: PowerHourConfig, song: PowerHourSong, song_num: int, v
         os.remove(aud_path)
 
 
+def process_interstitial(config: PowerHourConfig, interstitial_path: str):
+    dir_path = get_dir_path(config)
+    output_path = os.path.join(dir_path, f"{interstitial_filename}_{config.project_name}.ts")
+
+    metadata = ffmpeg.probe(interstitial_path)
+    video_stream = next((stream for stream in metadata['streams'] if stream['codec_type'] == 'video'), None)
+    duration = video_stream['duration']
+    fade_out_start_time = float(duration) - config.fade_duration
+    text_start_time = 0.5
+    enable_expr = f'between(t,{text_start_time},{fade_out_start_time})'
+    interstitial = ffmpeg.input(interstitial_path)
+    video = (
+        interstitial
+        .drawtext(text=config.interstitial_text,
+                  x=interstitial_text_pos.get_x_expr(10), y=interstitial_text_pos.get_y_expr(10),
+                  enable=enable_expr,
+                  fontfile=config.font_file,
+                  fontsize=config.interstitial_font_size * 1.1,
+                  fontcolor="yellow")
+        .drawtext(text=config.interstitial_text,
+                  x=interstitial_text_pos.get_x_expr(), y=interstitial_text_pos.get_y_expr(),
+                  enable=enable_expr,
+                  fontfile=config.font_file,
+                  fontsize=config.interstitial_font_size,
+                  fontcolor=config.font_color,
+                  bordercolor=config.font_border_color,
+                  borderw=config.font_border_width)
+        .filter('fade', type="in", start_time=0, duration=config.fade_duration)
+        .filter('fade', type="out", start_time=fade_out_start_time, duration=config.fade_duration)
+        .setpts('PTS-STARTPTS')
+    )
+    audio = (
+        interstitial.audio
+        .filter('afade', type="in", start_time=0, duration=config.fade_duration)
+        .filter('afade', type="out", start_time=fade_out_start_time, duration=config.fade_duration)
+        .filter_('asetpts', 'PTS-STARTPTS')
+    )
+    ffmpeg.output(video, audio, output_path).run(overwrite_output=True)
+    return output_path
+
+
+def convert_to_ts(vid_path: str):
+    if not os.path.exists(vid_path):
+        return
+    pre, ext = os.path.splitext(vid_path)
+    file_path = pre+'.ts'
+    cmd = f"ffmpeg -y -i {vid_path} -c copy -bsf:v h264_mp4toannexb -f mpegts {file_path}"
+    subprocess.run(cmd, stdout=subprocess.PIPE, check=True, shell=True)
+    return file_path
+
+
 def get_dir_path(config: PowerHourConfig):
     dir_path = os.path.dirname(os.path.realpath(__file__))
-    dir_path = os.path.join(dir_path, config.output_path)
+    dir_path = os.path.join(dir_path, config.project_name)
     if not os.path.exists(dir_path):
         os.mkdir(dir_path)
     return dir_path

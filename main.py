@@ -22,7 +22,7 @@ def main(input_path: str, output_name: str, verbose=False):
         if verbose:
             print(f"Song Parsed: {song} ")
     vid_path, aud_path = video_processor.download_song(config, songs[0])
-    video_processor.process_media(config, songs[0], 1, vid_path, aud_path)
+    video_processor.process_song(config, songs[0], 1, vid_path, aud_path)
 
 
 # Put IDE Debug stuff here
@@ -38,7 +38,7 @@ if __name__ == "__main__":
         config = PowerHourConfig(test_folder, text_padding_x=100, text_padding_y=80)
         valid, vid_path, aud_path = video_processor.validate_existing_files(config, songs[0])
         if valid:
-            video_processor.process_media(config, songs[0], 1, vid_path, aud_path, False)
+            video_processor.process_song(config, songs[0], 1, vid_path, aud_path, False)
         else:
             print("video or audio path does not exist, download_only first")
     else:

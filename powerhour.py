@@ -4,11 +4,21 @@ from enum import Enum
 class PowerHourConfig:
     default_font_size: int = 64
 
-    def __init__(self, output_path: str, fade_duration: float = 0.5, text_padding: float = 100,
-                 text_padding_x: float = -1, text_padding_y: float = -1, font_file: str = "",
-                 font_color: str = "white", font_size_scale: float = 1, font_border_width: int = 5,
-                 font_border_color: str = "black", title_start_time: float = 0.5, title_duration: float = 5):
-        self.output_path = output_path
+    def __init__(self,
+                 project_name: str,
+                 fade_duration: float = 0.5,
+                 text_padding: float = 100,
+                 text_padding_x: float = -1,
+                 text_padding_y: float = -1,
+                 font_file: str = "",
+                 font_color: str = "white",
+                 font_size_scale: float = 1,
+                 font_border_width: int = 5,
+                 font_border_color: str = "black",
+                 title_start_time: float = 0.5,
+                 title_duration: float = 5,
+                 interstitial_text: str = "Drink!"):
+        self.project_name = project_name
         self.fade_duration = fade_duration
         self.text_padding_x = text_padding_x if text_padding_x >= 0 else text_padding
         self.text_padding_y = text_padding_y if text_padding_y >= 0 else text_padding
@@ -17,11 +27,13 @@ class PowerHourConfig:
         self.title_font_size = scaled_font_size
         self.artist_font_size = scaled_font_size * 0.8
         self.number_font_size = scaled_font_size * 4
+        self.interstitial_font_size = scaled_font_size * 2
         self.font_border_width = font_border_width
         self.font_border_color = font_border_color
         self.title_start_time = title_start_time
         self.title_duration = title_duration
         self.font_file = font_file
+        self.interstitial_text = interstitial_text
 
 
 class PowerHourSong:
@@ -83,24 +95,24 @@ class VideoPos:
     def get_x_expr(self, offset: float = 0):
         match self.anchor:
             case PosAnchor.CENTER:
-                return self.center_x
+                return self.center_x if offset == 0 else f"{self.center_x} + {offset}"
             case PosAnchor.TOP_LEFT:
                 return self.top_left_x_fmt.format(padding=self.padding + offset)
             case PosAnchor.TOP_CENTER:
-                return self.top_center_x
+                return self.top_center_x if offset == 0 else f"{self.top_center_x} + {offset}"
             case PosAnchor.TOP_RIGHT:
                 return self.top_right_x_fmt.format(padding=self.padding + offset)
             case PosAnchor.BOTTOM_LEFT:
                 return self.bottom_left_x_fmt.format(padding=self.padding + offset)
             case PosAnchor.BOTTOM_CENTER:
-                return self.bottom_center_x
+                return self.bottom_center_x if offset == 0 else f"{self.bottom_center_x} + {offset}"
             case PosAnchor.BOTTOM_RIGHT:
                 return self.bottom_right_x_fmt.format(padding=self.padding + offset)
 
     def get_y_expr(self, offset: float = 0):
         match self.anchor:
             case PosAnchor.CENTER:
-                return self.center_y
+                return self.center_y if offset == 0 else f"{self.center_y} + {offset}"
             case PosAnchor.TOP_LEFT:
                 return self.top_left_y_fmt.format(padding=self.padding + offset)
             case PosAnchor.TOP_CENTER:
