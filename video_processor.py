@@ -129,6 +129,21 @@ def process_interstitial(config: PowerHourConfig, interstitial_path: str):
     return output_path
 
 
+def concat_power_hour(config: PowerHourConfig, interstitial_path: str, *video_paths: str):
+    if not os.path.exists(interstitial_path):
+        return
+    dir_path = get_dir_path(config)
+    output_path = os.path.join(dir_path, f"{config.project_name}_output.mp4")
+    txt_path = 'tmp.txt'
+    with open(txt_path, 'w') as f:
+        for video_path in video_paths:
+            f.write(f"file {video_path}\n")
+            f.write(f"file {interstitial_path}\n")
+    # ffmpeg -f concat -safe 0 -i tmp.txt -c copy output.mp4
+    ffmpeg.input(txt_path, f='concat', safe='0').output(output_path, vcodec='libx264').run(overwrite_output=True)
+    os.remove(txt_path)
+
+
 def convert_to_ts(vid_path: str):
     if not os.path.exists(vid_path):
         return
