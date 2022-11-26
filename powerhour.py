@@ -6,7 +6,6 @@ class PowerHourConfig:
 
     def __init__(self,
                  project_name: str,
-                 interstitial_path: str,
                  fade_duration: float = 0.5,
                  text_padding: float = 100,
                  text_padding_x: float = -1,
@@ -20,7 +19,6 @@ class PowerHourConfig:
                  title_duration: float = 5,
                  interstitial_text: str = "Drink!"):
         self.project_name = project_name
-        self.interstitial_path = interstitial_path
         self.fade_duration = fade_duration
         self.text_padding_x = text_padding_x if text_padding_x >= 0 else text_padding
         self.text_padding_y = text_padding_y if text_padding_y >= 0 else text_padding
