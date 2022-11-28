@@ -58,6 +58,10 @@ if __name__ == "__main__":
     elif os.getenv("AD_HOC") is not None:
         # Put whatever you need to test here
         print(f"AD_HOC")
+        #video_processor.download_highest_res("https://youtu.be/SIHS1lLzqOo")
+        #video_processor.download_highest_res("https://www.youtube.com/watch?v=y0p3jn7ODuc")
+        #video_processor.download_highest_res("https://www.youtube.com/watch?v=Ytvk3_WBFGI")
+        video_processor.upscale_test("1080p", "PinkPantheress,SamGellaitry-Pictureinmymind(OfficialVideo).mp4")
         # config = PowerHourConfig(str(uuid.uuid4()), text_padding_x=test_padding_x, text_padding_y=test_padding_y)
         # songs = list_processor.parse_list(test_import_tsv)
         # songs_paths = ["Heybaby.NoDoubt.clipped.ts", "Pictureinmymind.PinkPantheress,SamGellaitry.clipped.ts"]

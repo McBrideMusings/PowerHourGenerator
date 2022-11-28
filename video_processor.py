@@ -1,5 +1,7 @@
 import os
 import ffmpeg
+import video_data
+from ffmpeg_utilities import *
 from pytube import YouTube, StreamQuery
 from powerhour import *
 
@@ -10,7 +12,8 @@ song_number_pos = VideoPos(anchor=PosAnchor.BOTTOM_RIGHT, padding=100)
 interstitial_text_pos = VideoPos(anchor=PosAnchor.BOTTOM_CENTER, padding=100)
 
 
-def download_song(config: PowerHourConfig, song: PowerHourSong, ext: str = "mp4", remove: bool = True):
+def download_song(config: PowerHourConfig, song: PowerHourSong, ext: str = "mp4", target_res: str = "1080p",
+                  remove: bool = True):
     print(f"Starting Download {song.title} by {song.artist}")
     ext = get_file_format_ext(ext)
 
@@ -20,7 +23,7 @@ def download_song(config: PowerHourConfig, song: PowerHourSong, ext: str = "mp4"
 
     # download video only
     print(f"Getting Video Stream")
-    vid_stream = get_highest_resolution(yt.streams, target_res="1080p")
+    vid_stream, found_res = get_highest_stream_resolution(yt.streams, target_res=target_res)
     print(f"Best Video Stream {vid_stream}")
     vid_path = vid_stream.download(output_path=dir_path, filename="video.mp4")
 
@@ -40,7 +43,66 @@ def download_song(config: PowerHourConfig, song: PowerHourSong, ext: str = "mp4"
     return file_path
 
 
+def download_highest_res(link: str):
+    yt = YouTube(link)
+    dir_path = os.path.dirname(os.path.realpath(__file__))
+
+    # download video only
+    print(f"Getting Video Stream")
+    vid_stream = yt.streams.filter(adaptive=True).order_by("resolution").last()
+    print(f"Best Video Stream {vid_stream}")
+    vid_path = vid_stream.download(output_path=dir_path, filename=f"{yt.title.replace(' ', '')}.mp4")
+
+
+def upscale_test(res: str, vid_path: str):
+    # https://superuser.com/questions/891145/ffmpeg-upscale-and-letterbox-a-video
+    res_width, res_height = video_data.get_pixel_size(res)
+    if not res_width or not os.path.exists(vid_path):
+        return
+
+    path, filename = os.path.split(vid_path)
+    file_path = os.path.join(path, f"converted.{filename}")
+
+    metadata = ffmpeg.probe(vid_path)
+    video_stream = next((stream for stream in metadata['streams'] if stream['codec_type'] == 'video'), None)
+    scale = True
+    if video_data.get_resolution(video_stream['width'], video_stream['height']) == res:
+        scale = False
+    aspect_ratio = video_stream['display_aspect_ratio']
+    print(aspect_ratio)
+    # 'display_aspect_ratio' : str '4:3'
+    # 'r_frame_rate' : str '25/1'
+    # 'width' : int 2400
+    # 'height' : int 1800
+    # 'codec_name' : str 'av1'
+    letterbox = True if aspect_ratio != "16:9" else False
+    print(f"letterbox {letterbox}")
+    print(f"scale {scale}")
+    video = (
+        ffmpeg.input(vid_path).video
+    )
+    audio = (
+        ffmpeg.input(vid_path).audio
+    )
+    # TODO check if the video ISNT 16:9 aspect ratio. if not, then apply padding. otherwise dont
+    # TODO also probably DONT rescale video that is ALREADY the correct resolution
+    vf_compiled = []
+    if scale:
+        vf_compiled.append(
+            rf"scale=(iw*sar)*min({res_width}/(iw*sar)\,{res_height}/ih):ih*min({res_width}/(iw*sar)\,{res_height}/ih):flags=lanczos")
+    if letterbox:
+        vf_compiled.append(
+            rf"pad={res_width}:{res_height}:({res_width}-iw*min({res_width}/iw\,{res_height}/ih))/2:({res_height}-ih*min({res_width}/iw\,{res_height}/ih))/2")
+    if len(vf_compiled) == 0:
+        ffmpeg.output(audio, video, file_path).run(overwrite_output=True)
+    else:
+        vf_text = ", ".join(vf_compiled)
+        print(vf_text)
+        ffmpeg.output(audio, video, file_path, vf=vf_text).run(overwrite_output=True)
+
+
 def combine_audio_video(config: PowerHourConfig, song: PowerHourSong, vid_path: str, aud_path: str, ext: str):
+    # TODO Upscale to provided target resolution, likely 1080p, while maintaining aspect ratio
     dir_path = get_dir_path(config)
     file_path = os.path.join(dir_path, song.get_filename(ext, "clipped"))
     video = (
@@ -107,7 +169,7 @@ def process_song_effects(config: PowerHourConfig, song: PowerHourSong, num: int,
                   borderw=config.font_border_width)
         .filter('fade', type="in", duration=config.fade_duration)
         .filter('fade', type="out", start_time=fade_out_start_time, duration=config.fade_duration)
-        .setpts('PTS-STARTPTS')  #.filter('scale', width='-1', height='478')
+        .setpts('PTS-STARTPTS')  # .filter('scale', width='-1', height='478')
     )
     audio = (
         ffmpeg_input.audio
@@ -195,53 +257,11 @@ def get_dir_path(config: PowerHourConfig):
     return dir_path
 
 
-def get_highest_resolution(streams: StreamQuery, target_res: str = ""):
+def get_highest_stream_resolution(streams: StreamQuery, target_res: str = ""):
     streams = streams.filter(adaptive=True).order_by("resolution")
     stream = streams.filter(subtype="mp4", resolution=target_res).first()
     if stream is not None:
-        return stream
+        return stream, target_res
     else:
-        return streams.last()
-
-
-def get_file_format_ext(ext: str):
-    match ext:
-        case "ts":
-            return "ts"
-        case _:
-            return "mp4"
-
-
-def compare_resolution(a_res: str, b_res: str):
-    """
-    compares res string A to res string B, returns as follows
-    Less than zero	    The first resolution is lower than the second resolution
-    Zero	            The resolutions are the same
-    Greater than zero	The first resolution is higher than the second resolution
-    """
-    a_num = get_resolution_num(a_res)
-    b_num = get_resolution_num(b_res)
-    if a_num == b_num:
-        return 0
-    elif a_num > b_num:
-        return 1
-    else:
-        return -1
-
-
-def get_resolution_num(res: str):
-    match res:
-        case "144p":
-            return 0
-        case "360p":
-            return 1
-        case "720p":
-            return 2
-        case "1080p":
-            return 3
-        case "1440p":
-            return 4
-        case "2160p":
-            return 5
-        case _:
-            return -1
+        stream = streams.last()
+        return stream, stream["resolution"]
