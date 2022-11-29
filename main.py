@@ -21,7 +21,7 @@ def parse_args(argv):
     args = parser.parse_args()
 
 
-def main(input_path: str, project_name: str, interstitial_path: str, song_limit: int = 0):
+def main(input_path: str, project_name: str, target_res: str = "1080p", song_limit: int = 0):
     main_songs = list_processor.parse_list(input_path)
     main_config = PowerHourConfig(project_name)
     # Concat doesn't work right now, no need to process the interstitial
@@ -33,10 +33,13 @@ def main(input_path: str, project_name: str, interstitial_path: str, song_limit:
     print(f"song length {len(main_songs)}")
     for song in main_songs:
         song_path = video_processor.download_song(main_config, song)
+        scale, letterbox = video_processor.should_scale_letterbox(target_res, song_path)
+        if scale or letterbox:
+            song_path = video_processor.scale_letterbox_video(scale, letterbox, target_res, song_path)
         song_path = video_processor.process_song_effects(main_config, song, num, song_path)
         song_path_list.append(song_path)
         num = num + 1
-    # Concat doesn't work well right now
+    # Concat doesn't work correctly right now
     # video_processor.concat_power_hour(main_config, interstitial_processed, song_path_list)
 
 
@@ -49,7 +52,8 @@ if __name__ == "__main__":
         print(f"DOWNLOAD_ONLY")
         config = PowerHourConfig(str(uuid.uuid4()), text_padding_x=test_padding_x, text_padding_y=test_padding_y)
         songs = list_processor.parse_list(test_import_tsv)
-        vid_path = video_processor.download_song(config, songs[1], False)
+        for song in songs:
+            video_processor.download_song(config, song)
     elif os.getenv("PROCESS_ONLY") is not None:
         print(f"PROCESS_ONLY")
         config = PowerHourConfig(str(uuid.uuid4()), text_padding_x=test_padding_x, text_padding_y=test_padding_y)
@@ -58,14 +62,7 @@ if __name__ == "__main__":
     elif os.getenv("AD_HOC") is not None:
         # Put whatever you need to test here
         print(f"AD_HOC")
-        #video_processor.download_highest_res("https://youtu.be/SIHS1lLzqOo")
-        #video_processor.download_highest_res("https://www.youtube.com/watch?v=y0p3jn7ODuc")
-        #video_processor.download_highest_res("https://www.youtube.com/watch?v=Ytvk3_WBFGI")
-        video_processor.upscale_test("1080p", "PinkPantheress,SamGellaitry-Pictureinmymind(OfficialVideo).mp4")
-        # config = PowerHourConfig(str(uuid.uuid4()), text_padding_x=test_padding_x, text_padding_y=test_padding_y)
-        # songs = list_processor.parse_list(test_import_tsv)
-        # songs_paths = ["Heybaby.NoDoubt.clipped.ts", "Pictureinmymind.PinkPantheress,SamGellaitry.clipped.ts"]
-        # video_processor.concat_power_hour(config, "", songs_paths)
+        video_processor.scale_letterbox_video(True, True, "1080p", "Aaron'sParty.AaronCarter.clipped.mp4")
     else:
         print(f"MAIN")
         config = PowerHourConfig(str(uuid.uuid4()), text_padding_x=test_padding_x, text_padding_y=test_padding_y)
@@ -73,5 +70,5 @@ if __name__ == "__main__":
         env_song_limit = 0
         if os.getenv("SONG_LIMIT") is not None:
             env_song_limit = int(os.getenv("SONG_LIMIT"))
-        main(test_import_tsv, str(uuid.uuid4()), test_interstitial, env_song_limit)
+        main(test_import_tsv, str(uuid.uuid4()), target_res="1080p", song_limit=env_song_limit)
 

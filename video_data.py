@@ -36,7 +36,7 @@ def get_resolution(width: int, height: int):
     for resolution in resolutions:
         if resolution.width == width and resolution.height == height:
             return resolution.key
-    return "Unknown"
+    return "NonStandard"
 
 
 def get_pixel_size(res: str):
