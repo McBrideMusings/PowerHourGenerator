@@ -264,4 +264,4 @@ def get_highest_stream_resolution(streams: StreamQuery, target_res: str = ""):
         return stream, target_res
     else:
         stream = streams.last()
-        return stream, stream["resolution"]
+        return stream, stream.resolution
