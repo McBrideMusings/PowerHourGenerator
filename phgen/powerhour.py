@@ -1,4 +1,31 @@
-from enum import Enum
+from enum import IntEnum
+
+
+class ProcessOpt(IntEnum):
+    EDIT = 1
+    EDITSCALE = 2
+    EDITSCALEFX = 3
+
+
+class PowerHourSong:
+    def __init__(self, title: str, artist: str, start_time: int, link: str):
+        self.title = title
+        self.artist = artist
+        self.start_time = start_time
+        self.link = link
+        self.end_time = start_time + 60
+        self.title_start_time = start_time + 0.5
+        self.title_end_time = self.title_start_time + 5
+
+    def __str__(self):
+        return "SongChoice({}, {}, {}, {})".format(self.title, self.artist, self.start_time, self.link)
+
+    def get_filename(self, file_ending: str = "mp4", *extras: str):
+        filename = f"{self.title.replace(' ', '')}.{self.artist.replace(' ', '')}"
+        if len(extras) > 0:
+            for extra in extras:
+                filename = f"{filename}.{extra}"
+        return filename + f".{file_ending}"
 
 
 class PowerHourConfig:
@@ -35,26 +62,5 @@ class PowerHourConfig:
         self.font_file = font_file
         self.interstitial_text = interstitial_text
 
-
-class PowerHourSong:
-    def __init__(self, title: str, artist: str, start_time: int, link: str):
-        self.title = title
-        self.artist = artist
-        self.start_time = start_time
-        self.link = link
-        self.end_time = start_time + 60
-        self.title_start_time = start_time + 0.5
-        self.title_end_time = self.title_start_time + 5
-
-    def __str__(self):
-        return "SongChoice({}, {}, {}, {})".format(self.title, self.artist, self.start_time, self.link)
-
-    def get_filename(self, file_ending: str = "mp4", *extras: str):
-        filename = f"{self.title.replace(' ', '')}.{self.artist.replace(' ', '')}"
-        if len(extras) > 0:
-            for extra in extras:
-                filename = f"{filename}.{extra}"
-        return filename + f".{file_ending}"
-
-
-
+    def get_ph_filename(self, num: int, song: PowerHourSong, ext: str = "mp4") -> str:
+        return f"{self.project_name}.{num:02d}.{song.get_filename(ext)}"

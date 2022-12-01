@@ -1,6 +1,6 @@
 import os
 import csv
-from powerhour import PowerHourSong
+from phgen.powerhour import PowerHourSong
 from datetime import datetime, timedelta
 
 

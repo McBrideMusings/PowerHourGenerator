@@ -1,10 +1,10 @@
 import os
 import sys
 import argparse
-import list_processor
-import video_processor
+from typing import Tuple
+import list_processor, video_processor
 import uuid
-from powerhour import PowerHourConfig
+from powerhour import PowerHourConfig, ProcessOpt
 
 test_import_csv: str = "test_import.csv"
 test_import_tsv: str = "test_import.tsv"
@@ -28,29 +28,41 @@ def main_args():
         main(args.input, args.project, args.resolution, args.limit)
 
 
-def main(input_path: str, project_name: str, target_res: str = "1080p", song_limit: int = 0, start: int = 1):
+def main(input_path: str, project_name: str, input_range: Tuple[int, int] = (-1, -1), target_res: str = "1080p",
+         process: ProcessOpt = ProcessOpt.EDITSCALEFX):
     main_songs = list_processor.parse_list(input_path)
     main_config = PowerHourConfig(project_name)
     # Concat doesn't work right now, no need to process the interstitial
     # interstitial_processed = video_processor.process_interstitial(main_config, interstitial_path)
     num = 1
     song_path_list = []
-    if 0 < song_limit < len(main_songs):
-        main_songs = main_songs[:song_limit]
-    print(f"song length {len(main_songs)}")
+    start = 0
+    length = len(main_songs)
+    if input_range[0] > -1:
+        start = input_range[0]
+    if start + input_range[1] < length:
+        length = input_range[1]
+    if start >= 0:
+        if length < 0:
+            main_songs = main_songs[start:]
+        if length > 0 and length + start < len(main_songs):
+            main_songs = main_songs[start:start+length]
+    print(f"process length {len(main_songs)}")
     for song in main_songs:
-        if num >= start:
+        try:
             song_path = video_processor.download_song(main_config, song)
-            scale, letterbox = video_processor.should_scale_letterbox(target_res, song_path)
-            if scale or letterbox:
-                song_path = video_processor.scale_letterbox_video(scale, letterbox, target_res, song_path)
-            song_path = video_processor.process_song_effects(main_config, song, num, song_path)
-            path, filename = os.path.split(song_path)
-            filename = os.path.splitext(filename)[0]
-            newfilename = f"{project_name}.{num:02d}.{song.get_filename('mp4')}"
-            newpath = os.path.join(path, newfilename)
+            if process >= 1:
+                scale, letterbox = video_processor.should_scale_letterbox(target_res, song_path)
+                if process >= 2 and (scale or letterbox):
+                    song_path = video_processor.scale_letterbox_video(scale, letterbox, target_res, song_path)
+                if process >= 3:
+                    song_path = video_processor.process_song_effects(main_config, song, num, song_path)
+            path, _ = os.path.split(song_path)
+            newpath = os.path.join(path, main_config.get_ph_filename(num, song))
             os.rename(song_path, newpath)
             song_path_list.append(song_path)
+        except:
+            print(f"Error on row {num}")
         num = num + 1
     # Concat doesn't work correctly right now
     # video_processor.concat_power_hour(main_config, interstitial_processed, song_path_list)
@@ -74,7 +86,7 @@ def parse_args(parser: argparse.ArgumentParser) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
-        "-r",
+        "-res",
         "--resolution",
         const="mp4",
         help=(
@@ -83,15 +95,40 @@ def parse_args(parser: argparse.ArgumentParser) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "-rng",
+        "--range",
+        help=(
+            "Number of songs to download and process, starting from the first"
+            "Defaults to downloading the entire input"
+        ),
+    )
+    parser.add_argument(
         "-l",
-        "--limit",
-        const="0",
+        "--link",
         help=(
             "Number of songs to download and process, starting from the first"
             "Defaults to downloading the entire input"
         ),
     )
     return parser.parse_args()
+
+
+def parse_range(range_input: str):
+    if not range_input:
+        return -1
+    try:
+        if '-' in range_input:
+            part = range_input.partition('-')
+            start = int(part[0])
+            length = int(part[2])
+            return start, length
+        else:
+            start = int(range_input)
+            return start, -1
+    except:
+        print("Something went wrong")
+    finally:
+        return -1
 
 
 # Put IDE Debug stuff here
@@ -109,16 +146,21 @@ if __name__ == "__main__":
         print(f"PROCESS_ONLY")
         config = PowerHourConfig(str(uuid.uuid4()), text_padding_x=test_padding_x, text_padding_y=test_padding_y)
         songs = list_processor.parse_list(test_import_tsv)
-        video_processor.process_song_effects(config, songs[0], 1, test_process, False)
     elif os.getenv("AD_HOC") is not None:
         # Put whatever you need to test here
         print(f"AD_HOC")
-        video_processor.scale_letterbox_video(True, True, "1080p", "Aaron'sParty.AaronCarter.clipped.mp4")
+        config = PowerHourConfig(str(uuid.uuid4()), text_padding_x=test_padding_x, text_padding_y=test_padding_y)
+        songs = list_processor.parse_list(test_import_tsv)
+        main(test_import_tsv, "bdog", input_range=(0, 1), process=ProcessOpt.EDITSCALE)
     else:
         print(f"MAIN")
         config = PowerHourConfig(str(uuid.uuid4()), text_padding_x=test_padding_x, text_padding_y=test_padding_y)
         songs = list_processor.parse_list(test_import_tsv)
         env_song_limit = 0
         if os.getenv("SONG_LIMIT") is not None:
-            env_song_limit = int(os.getenv("SONG_LIMIT"))
-        main(test_import_tsv, str(uuid.uuid4()), target_res="1080p", song_limit=env_song_limit)
+            upper = int(os.getenv("SONG_LIMIT"))
+            main(test_import_tsv, str(uuid.uuid4()), input_range=(-1, upper))
+        if os.getenv("PROCESS_OPT") is not None:
+            opt = int(os.getenv("PROCESS_OPT"))
+            main(test_import_tsv, str(uuid.uuid4()), process=opt)
+        main(test_import_tsv, str(uuid.uuid4()))

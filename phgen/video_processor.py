@@ -3,7 +3,7 @@ import ffmpeg
 import video_data
 from ffmpeg_utilities import *
 from pytube import YouTube, StreamQuery
-from powerhour import *
+from phgen.powerhour import *
 
 interstitial_filename = "interstitial"
 
@@ -12,8 +12,7 @@ song_number_pos = VideoPos(anchor=PosAnchor.BOTTOM_RIGHT, padding=100)
 interstitial_text_pos = VideoPos(anchor=PosAnchor.BOTTOM_CENTER, padding=100)
 
 
-def download_song(config: PowerHourConfig, song: PowerHourSong, ext: str = "mp4", target_res: str = "1080p",
-                  remove: bool = True):
+def download_song(config: PowerHourConfig, song: PowerHourSong, edit: bool = True, ext: str = "mp4", target_res: str = "1080p"):
     print(f"Starting Download {song.title} by {song.artist}")
     ext = get_file_format_ext(ext)
 
@@ -35,11 +34,9 @@ def download_song(config: PowerHourConfig, song: PowerHourSong, ext: str = "mp4"
 
     print(f"{song.title} Streams Downloaded")
     # combine
-    combine_audio_video(config, song, vid_path, aud_path, ext, target_res)
-    if remove:
-        print(f"Removing Temporary Files for {song.title}")
-        os.remove(vid_path)
-        os.remove(aud_path)
+    combine_audio_video(config, song, vid_path, aud_path, ext)
+    os.remove(vid_path)
+    os.remove(aud_path)
     return file_path
 
 
@@ -66,10 +63,11 @@ def scale_letterbox_video(scale: bool, letterbox: bool, target_res: str, vid_pat
         vf_compiled.append(pad_expr.format(width=res_width, height=res_height))
     vf_text = ", ".join(vf_compiled)
     ffmpeg.output(audio, video, file_path, vf=vf_text).run(overwrite_output=True)
+    os.remove(vid_path)
     return file_path
 
 
-def combine_audio_video(config: PowerHourConfig, song: PowerHourSong, vid_path: str, aud_path: str, ext: str, res: str):
+def combine_audio_video(config: PowerHourConfig, song: PowerHourSong, vid_path: str, aud_path: str, ext: str):
     # TODO Figure out how to upscale and pad in the same encoding, currently done seperately
     dir_path = get_dir_path(config)
     file_path = os.path.join(dir_path, song.get_filename(ext, "clipped"))
@@ -215,6 +213,7 @@ def concat_power_hour(config: PowerHourConfig, interstitial_path: str, video_pat
     # ffmpeg -f concat -safe 0 -i tmp.txt -c copy output.mp4
     ffmpeg.input(txt_path, f='concat', safe='0').output(output_path, vcodec='libx264').run(overwrite_output=True)
     os.remove(txt_path)
+
 
 def should_scale_letterbox(res: str, vid_path: str):
     # https://superuser.com/questions/891145/ffmpeg-upscale-and-letterbox-a-video
