@@ -1,9 +1,10 @@
 import os
 import ffmpeg
-import video_data
-from ffmpeg_utilities import *
+import phgen.ffmpeg_utilities
+from phgen.ffmpeg_utilities import VideoPos, PosAnchor
+import phgen.video_data
+from phgen.phconfig import PowerHourSong, PowerHourConfig
 from pytube import YouTube, StreamQuery
-from phgen.powerhour import *
 
 interstitial_filename = "interstitial"
 
@@ -12,12 +13,14 @@ song_number_pos = VideoPos(anchor=PosAnchor.BOTTOM_RIGHT, padding=100)
 interstitial_text_pos = VideoPos(anchor=PosAnchor.BOTTOM_CENTER, padding=100)
 
 
-def download_song(config: PowerHourConfig, song: PowerHourSong, edit: bool = True, ext: str = "mp4", target_res: str = "1080p"):
+def download_song(config: PowerHourConfig, song: PowerHourSong, clip: bool = True, ext: str = "mp4",
+                  target_res: str = "1080p"):
     print(f"Starting Download {song.title} by {song.artist}")
-    ext = get_file_format_ext(ext)
+    ext = phgen.ffmpeg_utilities.get_file_format_ext(ext)
 
     yt = YouTube(song.link)
     dir_path = get_dir_path(config)
+    print(dir_path)
     file_path = os.path.join(dir_path, song.get_filename(ext, "clipped"))
 
     # download video only
@@ -34,7 +37,7 @@ def download_song(config: PowerHourConfig, song: PowerHourSong, edit: bool = Tru
 
     print(f"{song.title} Streams Downloaded")
     # combine
-    combine_audio_video(config, song, vid_path, aud_path, ext)
+    combine_audio_video(config, song, vid_path, aud_path, ext, clip=clip)
     os.remove(vid_path)
     os.remove(aud_path)
     return file_path
@@ -50,7 +53,7 @@ def scale_letterbox_video(scale: bool, letterbox: bool, target_res: str, vid_pat
     path, ext = os.path.splitext(vid_path)
     file_path = f"{path}.scaled{ext}"
     print(f"{path} :: target_res {target_res} scale {scale} - letterbox {letterbox}")
-    res_width, res_height = video_data.get_pixel_size(target_res)
+    res_width, res_height = phgen.video_data.get_pixel_size(target_res)
     video = (
         ffmpeg.input(vid_path).video
     )
@@ -67,20 +70,26 @@ def scale_letterbox_video(scale: bool, letterbox: bool, target_res: str, vid_pat
     return file_path
 
 
-def combine_audio_video(config: PowerHourConfig, song: PowerHourSong, vid_path: str, aud_path: str, ext: str):
+def combine_audio_video(config: PowerHourConfig, song: PowerHourSong, vid_path: str, aud_path: str, ext: str,
+                        clip: bool = True):
     # TODO Figure out how to upscale and pad in the same encoding, currently done seperately
     dir_path = get_dir_path(config)
     file_path = os.path.join(dir_path, song.get_filename(ext, "clipped"))
-    video = (
-        ffmpeg.input(vid_path)
-        .trim(start=song.start_time, end=song.end_time)
-        .setpts('PTS-STARTPTS')
-    )
-    audio = (
-        ffmpeg.input(aud_path)
-        .filter_('atrim', start=song.start_time, end=song.end_time)
-        .filter_('asetpts', 'PTS-STARTPTS')
-    )
+    video = ffmpeg.input(vid_path)
+    audio = ffmpeg.input(aud_path)
+    if clip:
+        video = (
+            ffmpeg.input(vid_path)
+            .trim(start=song.start_time, end=song.end_time)
+            .setpts('PTS-STARTPTS') # I have no fucking idea if this is necessary
+        )
+        audio = (
+            ffmpeg.input(aud_path)
+            .filter_('atrim', start=song.start_time, end=song.end_time)
+            .filter_('asetpts', 'PTS-STARTPTS') # I have no fucking idea if this is necessary
+        )
+
+    # non-mp4 stuff is broken as fuck fix me plz
     match ext:
         case "ts":
             # converting to Transport Stream as intermediary because it supports concat and mp4 does not
@@ -94,7 +103,8 @@ def combine_audio_video(config: PowerHourConfig, song: PowerHourSong, vid_path: 
 
 
 def process_song_effects(config: PowerHourConfig, song: PowerHourSong, num: int, vid_path: str,
-                         ext: str = "mp4", remove: bool = True):
+                         ext: str = "mp4", add_text: bool = True, add_fade: bool = True, remove: bool = True):
+    print(f"{add_text} {add_fade}")
     dir_path = get_dir_path(config)
     file_path = os.path.join(dir_path, song.get_filename(ext, "effects"))
 
@@ -104,45 +114,49 @@ def process_song_effects(config: PowerHourConfig, song: PowerHourSong, num: int,
     title_end_time = title_start_time + config.title_duration
     fade_out_start_time = 60 - config.fade_duration
     enable_expr = f'between(t,{title_start_time},{title_end_time})'
-    song_num_str = str(num) if num != 60 else "60!"  # ╰(*°▽°*)╯
-    video = (
-        ffmpeg_input.video
-        .drawtext(text=song.artist,
-                  x=song_title_pos.get_x_expr(),
-                  y=song_title_pos.get_y_expr(),
-                  enable=enable_expr,
-                  fontfile=config.font_file,
-                  fontsize=config.artist_font_size,
-                  fontcolor=config.font_color,
-                  bordercolor=config.font_border_color,
-                  borderw=config.font_border_width)
-        .drawtext(text=song.title,
-                  x=song_title_pos.get_x_expr(),
-                  y=song_title_pos.get_y_expr(config.artist_font_size * 1.2),
-                  enable=enable_expr,
-                  fontfile=config.font_file,
-                  fontsize=config.title_font_size,
-                  fontcolor=config.font_color,
-                  bordercolor=config.font_border_color,
-                  borderw=config.font_border_width)
-        .drawtext(text=song_num_str,
-                  x=song_number_pos.get_x_expr(),
-                  y=song_number_pos.get_y_expr(),
-                  fontfile=config.font_file,
-                  fontsize=config.number_font_size,
-                  fontcolor=config.font_color,
-                  bordercolor=config.font_border_color,
-                  borderw=config.font_border_width)
-        .filter('fade', type="in", duration=config.fade_duration)
-        .filter('fade', type="out", start_time=fade_out_start_time, duration=config.fade_duration)
-        .setpts('PTS-STARTPTS')  # .filter('scale', width='-1', height='478')
-    )
-    audio = (
-        ffmpeg_input.audio
-        .filter('afade', type="in", duration=config.fade_duration)
-        .filter('afade', type="out", start_time=fade_out_start_time, duration=config.fade_duration)
-        .filter_('asetpts', 'PTS-STARTPTS')
-    )
+    song_num_str = str(num) if num != 60 else "60!"  # ╰(*°▽°*)╯ this case might need some thinking
+    video = ffmpeg_input.video
+    if add_text:
+        # this syntax is fucking weird
+        video = ffmpeg.drawtext(video,
+                                text=song.artist,
+                                x=song_title_pos.get_x_expr(),
+                                y=song_title_pos.get_y_expr(),
+                                enable=enable_expr,
+                                fontfile=config.font_file,
+                                fontsize=config.artist_font_size,
+                                fontcolor=config.font_color,
+                                bordercolor=config.font_border_color,
+                                borderw=config.font_border_width)
+        video = ffmpeg.drawtext(video,
+                                text=song.title,
+                                x=song_title_pos.get_x_expr(),
+                                y=song_title_pos.get_y_expr(config.artist_font_size * 1.2),
+                                enable=enable_expr,
+                                fontfile=config.font_file,
+                                fontsize=config.title_font_size,
+                                fontcolor=config.font_color,
+                                bordercolor=config.font_border_color,
+                                borderw=config.font_border_width)
+        video = ffmpeg.drawtext(video,
+                                text=song_num_str,
+                                x=song_number_pos.get_x_expr(),
+                                y=song_number_pos.get_y_expr(),
+                                fontfile=config.font_file,
+                                fontsize=config.number_font_size,
+                                fontcolor=config.font_color,
+                                bordercolor=config.font_border_color,
+                                borderw=config.font_border_width)
+    if add_fade:
+        video = ffmpeg.filter(video, 'fade', type="in", duration=config.fade_duration)
+        video = ffmpeg.filter(video, 'fade', type="out", start_time=fade_out_start_time, duration=config.fade_duration)
+
+    audio = ffmpeg_input.audio
+    if add_fade:
+        audio = ffmpeg.filter(audio, 'afade', type="in", duration=config.fade_duration)
+        audio = ffmpeg.filter(audio, 'afade', type="out", start_time=fade_out_start_time, duration=config.fade_duration)
+
+    # non-mp4 stuff is broken as fuck fix me plz
     match ext:
         case "ts":
             # converting to Transport Stream as intermediary because it supports concat and mp4 does not
@@ -227,8 +241,8 @@ def should_scale_letterbox(res: str, vid_path: str):
     # 'codec_name' : str 'av1'
     video_stream = next((stream for stream in metadata['streams'] if stream['codec_type'] == 'video'), None)
     scale = True
-    result = video_data.get_resolution(video_stream['width'], video_stream['height'])
-    if video_data.get_resolution(video_stream['width'], video_stream['height']) == res:
+    result = phgen.video_data.get_resolution(video_stream['width'], video_stream['height'])
+    if phgen.video_data.get_resolution(video_stream['width'], video_stream['height']) == res:
         scale = False
     aspect_ratio = video_stream['display_aspect_ratio']
     letterbox = True if aspect_ratio != "16:9" else False
@@ -236,7 +250,7 @@ def should_scale_letterbox(res: str, vid_path: str):
 
 
 def get_dir_path(config: PowerHourConfig):
-    dir_path = os.path.dirname(os.path.realpath(__file__))
+    dir_path = os.getcwd()
     dir_path = os.path.join(dir_path, config.project_name)
     if not os.path.exists(dir_path):
         os.mkdir(dir_path)
@@ -244,7 +258,6 @@ def get_dir_path(config: PowerHourConfig):
 
 
 def get_highest_stream_resolution(streams: StreamQuery, target_res: str = ""):
-    streams.get_highest_resolution()
     streams = streams.filter(adaptive=True).order_by("resolution")
     stream = streams.filter(subtype="mp4", resolution=target_res).first()
     if stream is not None:

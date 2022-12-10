@@ -60,6 +60,3 @@ def get_valid_resolution(res: str):
     if not res or res not in resolutions:
         return resolutions[resolution_default].key
     return res
-
-
-

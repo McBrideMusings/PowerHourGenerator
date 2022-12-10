@@ -1,15 +1,11 @@
-from setuptools import setup, find_packages
+from setuptools import setup
 
 setup(
-	name='phgen',
-	version='0.1.0',
-    # To provide executable scripts, use entry points in preference to the
-    # "scripts" keyword. Entry points provide cross-platform support and allow
-    # pip to create the appropriate form of executable for the target platform.
-    packages=find_packages(include=['phgen', 'phgen.*']),
+    name='PowerHourGenerator',
+    version='0.1.0',
     entry_points={
         'console_scripts': [
-            'phgen=phgen.main:main_args'
+            'phgen = phgen.cli:main'
         ]
     },
     install_requires=[
@@ -17,3 +13,7 @@ setup(
         'ffmpeg-python'
     ]
 )
+
+
+if __name__ == "__main__":
+    print("fasfasf")

@@ -135,3 +135,4 @@ test/*
 *.mp4
 *.ts
 tmp.txt
+build/
