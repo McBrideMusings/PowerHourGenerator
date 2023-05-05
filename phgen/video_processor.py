@@ -18,7 +18,7 @@ def download_song(config: PowerHourConfig, song: PowerHourSong, clip: bool = Tru
     print(f"Starting Download {song.title} by {song.artist}")
     ext = phgen.ffmpeg_utilities.get_file_format_ext(ext)
 
-    yt = YouTube(song.link)
+    yt = YouTube(song.link, use_oauth=True)
     dir_path = get_dir_path(config)
     print(dir_path)
     file_path = os.path.join(dir_path, song.get_filename(ext, "clipped"))
@@ -112,7 +112,7 @@ def process_song_effects(config: PowerHourConfig, song: PowerHourSong, num: int,
     # dynamic values determined by both song and config params
     title_start_time = config.title_start_time
     title_end_time = title_start_time + config.title_duration
-    fade_out_start_time = 60 - config.fade_duration
+    fade_out_start_time = (song.end_time - song.start_time) - config.fade_duration
     enable_expr = f'between(t,{title_start_time},{title_end_time})'
     song_num_str = str(num) if num != 60 else "60!"  # ╰(*°▽°*)╯ this case might need some thinking
     video = ffmpeg_input.video
