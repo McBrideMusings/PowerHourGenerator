@@ -37,5 +37,4 @@ class PowerHourConfig:
         self.target_res = target_res
 
     def get_ph_filename(self, num: int, song: PowerHourSong, ext: str = "mp4") -> str:
-        #return f"{self.project_name}.{num:02d}.{song.get_filename(ext)}"
-        return f"{song.get_filename(ext)}"
+        return f"song.{song.get_filename(ext)}"
