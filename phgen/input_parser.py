@@ -36,6 +36,8 @@ def parse_list(path: str):
                 duration=duration,
                 link=link)
             song_list.append(parsed)
+    if len(song_list) == 0:
+        print("No songs found in list!")
     return song_list
 
 
