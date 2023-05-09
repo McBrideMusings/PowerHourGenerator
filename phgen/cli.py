@@ -6,6 +6,7 @@ from typing import Tuple
 import phgen.input_parser
 import phgen.video_processor
 import phgen.main
+import phgen.generate
 from phgen.phconfig import PowerHourConfig
 
 range_partition_chars = ['-', ':']
@@ -17,34 +18,10 @@ def main():
     songs = phgen.input_parser.parse_list(args.input)
     start, length = validate_range(args.range, songs)
     if args.dry_run:
-        print(f"Parsed Song Length {length}")
-        for i, song in enumerate(songs):
-            if i < start or i >= (start + length):
-                continue
-            print(song)
+        phgen.generate.generate_dry_run(songs, start, length)
         sys.exit(0)
-    config = PowerHourConfig(args.project, target_res=args.resolution)
-    for i, song in enumerate(songs):
-        if i < start or i >= (start + length):
-            continue
-        try:
-            num = i + 1
-            clip = not args.no_clip
-            song_path = phgen.video_processor.download_song(config, song, clip=clip)
-            scale, letterbox = phgen.video_processor.should_scale_letterbox(config.target_res, song_path)
-            if scale or letterbox:
-                song_path = phgen.video_processor.scale_letterbox_video(scale, letterbox, config.target_res, song_path)
-            if not args.no_fade and not args.no_text:
-                add_fade = not args.no_fade
-                add_text = not args.no_text
-                song_path = phgen.video_processor.process_song_effects(config, song, num, song_path, add_fade=add_fade,
-                                                                       add_text=add_text)
-            path, _ = os.path.split(song_path)
-            new_path = os.path.join(path, config.get_ph_filename(num, song))
-            os.rename(song_path, new_path)
-        except Exception as e:
-            print(f"Error on row {i}")
-            print(e)
+    config = PowerHourConfig(args.project, target_res=args.resolution, font_file=args.font)
+    phgen.generate.generate(songs, config, start, length, no_text=args.no_text, no_fade=args.no_fade, no_clip=args.no_clip)
 
 
 def parse_args(parser: argparse.ArgumentParser) -> argparse.Namespace:
@@ -76,6 +53,16 @@ def parse_args(parser: argparse.ArgumentParser) -> argparse.Namespace:
             """\
                 Resolution of the project, eg 1080p, 720p
                 All videos will be scaled to this resolution, letterboxed if necessary
+            """
+        ),
+    )
+    parser.add_argument(
+        "-f",
+        "--font",
+        default="Oswald.ttf",
+        help=(
+            """\
+                Font file to use for text
             """
         ),
     )
@@ -169,7 +156,7 @@ def validate_range(range_input: str, song_list: list) -> Tuple[int, int]:
                 length = int(part[2])
             else:
                 start = int(range_input)
-                length = list_len - start
+                length = 1
         except:
             print("Something went wrong with parsing your range")
     start = start if 0 <= start < list_len else 0

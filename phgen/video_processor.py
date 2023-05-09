@@ -19,7 +19,7 @@ def download_song(config: PowerHourConfig, song: PowerHourSong, clip: bool = Tru
     ext = phgen.ffmpeg_utilities.get_file_format_ext(ext)
 
     yt = YouTube(song.link, use_oauth=True)
-    dir_path = get_dir_path(config)
+    dir_path = config.get_dir_path()
     print(dir_path)
     file_path = os.path.join(dir_path, song.get_filename(ext, "clipped"))
 
@@ -43,7 +43,7 @@ def download_song(config: PowerHourConfig, song: PowerHourSong, clip: bool = Tru
     return file_path
 
 
-def scale_letterbox_video(scale: bool, letterbox: bool, target_res: str, vid_path: str):
+def scale_letterbox_video(scale: bool, letterbox: bool, target_res: str, vid_path: str, remove : bool=True):
     # https://superuser.com/questions/891145/ffmpeg-upscale-and-letterbox-a-video
     if not os.path.exists(vid_path):
         return
@@ -66,14 +66,15 @@ def scale_letterbox_video(scale: bool, letterbox: bool, target_res: str, vid_pat
         vf_compiled.append(pad_expr.format(width=res_width, height=res_height))
     vf_text = ", ".join(vf_compiled)
     ffmpeg.output(audio, video, file_path, vf=vf_text).run(overwrite_output=True)
-    os.remove(vid_path)
+    if remove:
+        os.remove(vid_path)
     return file_path
 
 
 def combine_audio_video(config: PowerHourConfig, song: PowerHourSong, vid_path: str, aud_path: str, ext: str,
                         clip: bool = True):
     # TODO Figure out how to upscale and pad in the same encoding, currently done seperately
-    dir_path = get_dir_path(config)
+    dir_path = config.get_dir_path()
     file_path = os.path.join(dir_path, song.get_filename(ext, "clipped"))
     video = ffmpeg.input(vid_path)
     audio = ffmpeg.input(aud_path)
@@ -105,7 +106,7 @@ def combine_audio_video(config: PowerHourConfig, song: PowerHourSong, vid_path: 
 def process_song_effects(config: PowerHourConfig, song: PowerHourSong, num: int, vid_path: str,
                          ext: str = "mp4", add_text: bool = True, add_fade: bool = True, remove: bool = True):
     print(f"{add_text} {add_fade}")
-    dir_path = get_dir_path(config)
+    dir_path = config.get_dir_path()
     file_path = os.path.join(dir_path, song.get_filename(ext, "effects"))
 
     ffmpeg_input = ffmpeg.input(vid_path)
@@ -119,11 +120,11 @@ def process_song_effects(config: PowerHourConfig, song: PowerHourSong, num: int,
     if add_text:
         # this syntax is fucking weird
         video = ffmpeg.drawtext(video,
-                                text=song.artist,
+                                text=song.artist.upper(),
                                 x=song_title_pos.get_x_expr(),
                                 y=song_title_pos.get_y_expr(),
                                 enable=enable_expr,
-                                fontfile=config.font_file,
+                                fontfile=config.get_full_font_path(),
                                 fontsize=config.artist_font_size,
                                 fontcolor=config.font_color,
                                 bordercolor=config.font_border_color,
@@ -131,9 +132,9 @@ def process_song_effects(config: PowerHourConfig, song: PowerHourSong, num: int,
         video = ffmpeg.drawtext(video,
                                 text=song.title,
                                 x=song_title_pos.get_x_expr(),
-                                y=song_title_pos.get_y_expr(config.artist_font_size * 1.2),
+                                y=song_title_pos.get_y_expr(config.artist_font_size * 1.5),
                                 enable=enable_expr,
-                                fontfile=config.font_file,
+                                fontfile=config.get_full_font_path(),
                                 fontsize=config.title_font_size,
                                 fontcolor=config.font_color,
                                 bordercolor=config.font_border_color,
@@ -142,7 +143,7 @@ def process_song_effects(config: PowerHourConfig, song: PowerHourSong, num: int,
                                 text=song_num_str,
                                 x=song_number_pos.get_x_expr(),
                                 y=song_number_pos.get_y_expr(),
-                                fontfile=config.font_file,
+                                fontfile=config.get_full_font_path(),
                                 fontsize=config.number_font_size,
                                 fontcolor=config.font_color,
                                 bordercolor=config.font_border_color,
@@ -172,7 +173,7 @@ def process_song_effects(config: PowerHourConfig, song: PowerHourSong, num: int,
 
 
 def process_interstitial(config: PowerHourConfig, interstitial_path: str):
-    dir_path = get_dir_path(config)
+    dir_path = config.get_dir_path()
     output_path = os.path.join(dir_path, f"{interstitial_filename}_{config.project_name}.ts")
 
     metadata = ffmpeg.probe(interstitial_path)
@@ -214,7 +215,7 @@ def process_interstitial(config: PowerHourConfig, interstitial_path: str):
 
 def concat_power_hour(config: PowerHourConfig, interstitial_path: str, video_paths: list, song_limit: int = 0):
     interstitial_valid = os.path.exists(interstitial_path)
-    dir_path = get_dir_path(config)
+    dir_path = config.get_dir_path()
     output_path = os.path.join(dir_path, f"{config.project_name}_output.mp4")
     txt_path = 'tmp.txt'
     if 0 < song_limit < len(video_paths):
@@ -244,17 +245,11 @@ def should_scale_letterbox(res: str, vid_path: str):
     result = phgen.video_data.get_resolution(video_stream['width'], video_stream['height'])
     if phgen.video_data.get_resolution(video_stream['width'], video_stream['height']) == res:
         scale = False
-    aspect_ratio = video_stream['display_aspect_ratio']
-    letterbox = True if aspect_ratio != "16:9" else False
+    if "display_aspect_ratio" in video_stream:
+        letterbox = True if video_stream['display_aspect_ratio'] != "16:9" else False
+    else:
+        letterbox = True
     return scale, letterbox
-
-
-def get_dir_path(config: PowerHourConfig):
-    dir_path = os.getcwd()
-    dir_path = os.path.join(dir_path, config.project_name)
-    if not os.path.exists(dir_path):
-        os.mkdir(dir_path)
-    return dir_path
 
 
 def get_highest_stream_resolution(streams: StreamQuery, target_res: str = ""):
