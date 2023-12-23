@@ -15,14 +15,35 @@ range_partition_chars = ['-', ':']
 def main():
     parser = argparse.ArgumentParser(description=main.__doc__)
     args = parse_args(parser)
-    songs = phgen.input_parser.parse_list(args.input)
+    songs = []
+    inputType = 0
+    if args.input.startswith("http"):
+        inputType = 1
+        songs = phgen.input_parser.parse_youtube(args)
+    elif args.input.endswith(".csv") or args.input.endswith(".tsv"):
+        inputType = 2
+        songs = phgen.input_parser.parse_list(args)
+    elif args.input.endswith(".mp4"):
+        inputType = 3
+        songs = phgen.input_parser.parse_video_file(args)
+
+    if not songs or len(songs) == 0:
+        print("Problem parsing input, no songs found or invalid input type")
+        sys.exit(1)
     start, length = validate_range(args.range, songs)
     if args.dry_run:
         phgen.generate.generate_dry_run(songs, start, length)
         sys.exit(0)
     config = PowerHourConfig(args.project, target_res=args.resolution, font_file=args.font)
-    phgen.generate.generate(songs, config, start, length, no_text=args.no_text, no_fade=args.no_fade, no_clip=args.no_clip)
-
+    if inputType == 1: # url
+        phgen.generate.generate_http(config, songs[0], 0, no_text=args.no_text, no_fade=args.no_fade, no_clip=args.no_clip)
+    elif inputType == 2: # list
+        phgen.generate.generate_list(songs, config, start, length, no_text=args.no_text, no_fade=args.no_fade, no_clip=args.no_clip)
+    elif inputType == 3: # video file
+        phgen.generate.generate_video(config, songs[0], 0, no_text=args.no_text, no_fade=args.no_fade, no_clip=args.no_clip, remove=False)
+    else:
+        print("Invalid input type, how did you even get here?")
+        sys.exit(1)
 
 def parse_args(parser: argparse.ArgumentParser) -> argparse.Namespace:
     parser.add_argument(
@@ -79,6 +100,36 @@ def parse_args(parser: argparse.ArgumentParser) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "-t",
+        "--title",
+        default="Default Title",
+        help=(
+            """\
+                Title if processing a single video or link
+            """
+        ),
+    )
+    parser.add_argument(
+        "-a",
+        "--artist",
+        default="Default Artist",
+        help=(
+            """\
+                Artist if processing a single video or link
+            """
+        ),
+    )
+    parser.add_argument(
+        "-st",
+        "--start_time",
+        default=0,
+        help=(
+            """\
+                Start time if processing a single video or link
+            """
+        ),
+    )
+    parser.add_argument(
         "-d",
         "--dry_run",
         action="store_true",
@@ -122,8 +173,10 @@ def parse_args(parser: argparse.ArgumentParser) -> argparse.Namespace:
     if not args.input:
         parser.print_help()
         sys.exit(1)
-    if not os.path.exists(args.input):
-        print("input file doesn't exist, check again you spelled it right")
+    valid_path = os.path.exists(args.input)
+    valid_url = args.input.startswith("http") # obviously not a perfect check, whatever dig your own grave user
+    if not valid_path and not valid_url:
+        print("input not valid path or youtube url")
         sys.exit(1)
     valid_path = True
     if args.project is None:

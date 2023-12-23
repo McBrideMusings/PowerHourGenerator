@@ -19,17 +19,17 @@ if __name__ == "__main__":
     print(f"4: Process Video {debug_video}")
     num = int(input("Enter a number between 0 and 4: "))
     if num == 0:
-        songs = phgen.input_parser.parse_list(debug_tsv)
-        phgen.generate.generate(songs, debug_config, 0, len(songs))
+        songs = phgen.input_parser.parse_input(debug_tsv)
+        phgen.generate.generate_list(songs, debug_config, 0, len(songs))
     elif num == 1:
-        songs = phgen.input_parser.parse_list(debug_tsv)
+        songs = phgen.input_parser.parse_input(debug_tsv)
         phgen.generate.generate_dry_run(songs, 0, len(songs))
     elif num == 2:
-        songs = phgen.input_parser.parse_list(debug_tsv)
-        phgen.generate.generate(songs, debug_config, 0, 1)
+        songs = phgen.input_parser.parse_input(debug_tsv)
+        phgen.generate.generate_list(songs, debug_config, 0, 1)
     elif num == 3:
-        phgen.video_processor.download_song(debug_config, debug_song)
+        phgen.video_processor.download(debug_config, debug_song)
     elif num == 4:
         dir_path = debug_config.get_dir_path()
         file_path = os.path.join(dir_path, debug_video)
-        phgen.generate.process_video(file_path, debug_config, debug_song, 2, remove=False)
+        phgen.generate.process_video(file_path, debug_config, debug_song, 2, remove_src=False)

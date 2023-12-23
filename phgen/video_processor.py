@@ -13,7 +13,7 @@ song_number_pos = VideoPos(anchor=PosAnchor.BOTTOM_RIGHT, padding=100)
 interstitial_text_pos = VideoPos(anchor=PosAnchor.BOTTOM_CENTER, padding=100)
 
 
-def download_song(config: PowerHourConfig, song: PowerHourSong, clip: bool = True, ext: str = "mp4",
+def download(config: PowerHourConfig, song: PowerHourSong, ext: str = "mp4",
                   target_res: str = "1080p"):
     print(f"Starting Download {song.title} by {song.artist}")
     ext = phgen.ffmpeg_utilities.get_file_format_ext(ext)
@@ -37,7 +37,7 @@ def download_song(config: PowerHourConfig, song: PowerHourSong, clip: bool = Tru
 
     print(f"{song.title} Streams Downloaded")
     # combine
-    combine_audio_video(config, song, vid_path, aud_path, ext, clip=clip)
+    combine_audio_video(config, song, vid_path, aud_path, ext)
     os.remove(vid_path)
     os.remove(aud_path)
     return file_path
@@ -71,24 +71,12 @@ def scale_letterbox_video(scale: bool, letterbox: bool, target_res: str, vid_pat
     return file_path
 
 
-def combine_audio_video(config: PowerHourConfig, song: PowerHourSong, vid_path: str, aud_path: str, ext: str,
-                        clip: bool = True):
+def combine_audio_video(config: PowerHourConfig, song: PowerHourSong, vid_path: str, aud_path: str, ext: str = "mp4"):
     # TODO Figure out how to upscale and pad in the same encoding, currently done seperately
     dir_path = config.get_dir_path()
     file_path = os.path.join(dir_path, song.get_filename(ext, "clipped"))
     video = ffmpeg.input(vid_path)
     audio = ffmpeg.input(aud_path)
-    if clip:
-        video = (
-            ffmpeg.input(vid_path)
-            .trim(start=song.start_time, end=song.end_time)
-            .setpts('PTS-STARTPTS') # I have no fucking idea if this is necessary
-        )
-        audio = (
-            ffmpeg.input(aud_path)
-            .filter_('atrim', start=song.start_time, end=song.end_time)
-            .filter_('asetpts', 'PTS-STARTPTS') # I have no fucking idea if this is necessary
-        )
 
     # non-mp4 stuff is broken as fuck fix me plz
     match ext:
@@ -99,6 +87,27 @@ def combine_audio_video(config: PowerHourConfig, song: PowerHourSong, vid_path: 
             ffmpeg.output(audio, video, file_path, vcodec="libx264", f="mpegts").run(overwrite_output=True)
         case _:  # also mp4
             ffmpeg.output(audio, video, file_path).run(overwrite_output=True)
+    print(f"{song.title} ffmpeg combine_audio_video output complete")
+    return file_path
+
+def clip(config: PowerHourConfig, song: PowerHourSong, vid_path: str, ext: str = "mp4"):
+    # TODO Figure out how to upscale and pad in the same encoding, currently done seperately
+    dir_path = config.get_dir_path()
+    file_path = os.path.join(dir_path, song.get_filename(ext, "clipped"))
+    video = (ffmpeg.input(vid_path)
+            .trim(start=song.start_time, end=song.end_time)
+            .setpts('PTS-STARTPTS') # I have no fucking idea if this is necessary
+        )
+        
+    # non-mp4 stuff is broken as fuck fix me plz
+    match ext:
+        case "ts":
+            # converting to Transport Stream as intermediary because it supports concat and mp4 does not
+            # remove vcodec, format(f) and change path ending above if you want to switch to combine as mp4
+            # ffmpeg -i file1.mp4 -c copy -bsf:v h264_mp4toannexb -f mpegts fileIntermediate1.ts
+            ffmpeg.output(video, file_path, vcodec="libx264", f="mpegts").run(overwrite_output=True)
+        case _:  # also mp4
+            ffmpeg.output(video, file_path).run(overwrite_output=True)
     print(f"{song.title} ffmpeg combine_audio_video output complete")
     return file_path
 

@@ -6,12 +6,13 @@ def clean_string(text: str):
 
 
 class PowerHourSong:
-    def __init__(self, title: str, artist: str, start_time: int, link: str,
-                 duration: int = 60):
+    def __init__(self, title: str, artist: str, start_time: int, link: str, 
+                 name: str = None, duration: int = 60):
         self.title = title
         self.artist = artist
         self.start_time = start_time
         self.link = link
+        self.name = name
         duration = max(3, duration) # at least 3 sec other wtf is the user even doing
         self.end_time = start_time + duration
         self.title_start_time = start_time + 0.5
