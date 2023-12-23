@@ -40,7 +40,7 @@ def main():
     elif inputType == 2: # list
         phgen.generate.generate_list(songs, config, start, length, no_text=args.no_text, no_fade=args.no_fade, no_clip=args.no_clip)
     elif inputType == 3: # video file
-        phgen.generate.generate_video(config, songs[0], 0, no_text=args.no_text, no_fade=args.no_fade, no_clip=args.no_clip, remove=False)
+        phgen.generate.generate_video(config, songs[0], 0, no_text=args.no_text, no_fade=args.no_fade, no_clip=args.no_clip)
     else:
         print("Invalid input type, how did you even get here?")
         sys.exit(1)

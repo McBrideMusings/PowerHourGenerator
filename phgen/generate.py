@@ -49,11 +49,8 @@ def generate_list(songs: list, config: PowerHourConfig, start: int, length: int,
 def generate_video(config : PowerHourConfig, song : PowerHourSong, num : int, no_text: bool=False, no_fade: bool=False, no_clip: bool=False, remove: bool=True):
     try:
         if not no_clip:
-            print("Clipping video")
-            video_path = phgen.video_processor.clip(config, song, song.link)
-        print("process_video")
+            video_path = phgen.video_processor.clip(config, song, song.link, remove=False)
         video_path = process_video(video_path, config, song, num, no_fade=no_fade, no_text=no_text, remove_src=remove)
-        print("create_file")
         create_file(video_path, config, song, num)
     except Exception as e:
         raise Exception(e)

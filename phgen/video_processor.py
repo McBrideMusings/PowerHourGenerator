@@ -38,12 +38,10 @@ def download(config: PowerHourConfig, song: PowerHourSong, ext: str = "mp4",
     print(f"{song.title} Streams Downloaded")
     # combine
     combine_audio_video(config, song, vid_path, aud_path, ext)
-    os.remove(vid_path)
-    os.remove(aud_path)
     return file_path
 
 
-def scale_letterbox_video(scale: bool, letterbox: bool, target_res: str, vid_path: str, remove : bool=True):
+def scale_letterbox_video(scale: bool, letterbox: bool, target_res: str, vid_path: str, remove: bool=True):
     # https://superuser.com/questions/891145/ffmpeg-upscale-and-letterbox-a-video
     if not os.path.exists(vid_path):
         return
@@ -88,15 +86,24 @@ def combine_audio_video(config: PowerHourConfig, song: PowerHourSong, vid_path: 
         case _:  # also mp4
             ffmpeg.output(audio, video, file_path).run(overwrite_output=True)
     print(f"{song.title} ffmpeg combine_audio_video output complete")
+    os.remove(vid_path)
+    os.remove(aud_path)
     return file_path
 
-def clip(config: PowerHourConfig, song: PowerHourSong, vid_path: str, ext: str = "mp4"):
+def clip(config: PowerHourConfig, song: PowerHourSong, vid_path: str, ext: str = "mp4", remove: bool=True):
     # TODO Figure out how to upscale and pad in the same encoding, currently done seperately
     dir_path = config.get_dir_path()
     file_path = os.path.join(dir_path, song.get_filename(ext, "clipped"))
-    video = (ffmpeg.input(vid_path)
+    ffmpeg_input = ffmpeg.input(vid_path)
+    video = (
+            ffmpeg_input
             .trim(start=song.start_time, end=song.end_time)
             .setpts('PTS-STARTPTS') # I have no fucking idea if this is necessary
+        )
+    audio = (
+            ffmpeg_input
+            .filter_('atrim', start=song.start_time, end=song.end_time)
+            .filter_('asetpts', 'PTS-STARTPTS') # I have no fucking idea if this is necessary
         )
         
     # non-mp4 stuff is broken as fuck fix me plz
@@ -105,10 +112,12 @@ def clip(config: PowerHourConfig, song: PowerHourSong, vid_path: str, ext: str =
             # converting to Transport Stream as intermediary because it supports concat and mp4 does not
             # remove vcodec, format(f) and change path ending above if you want to switch to combine as mp4
             # ffmpeg -i file1.mp4 -c copy -bsf:v h264_mp4toannexb -f mpegts fileIntermediate1.ts
-            ffmpeg.output(video, file_path, vcodec="libx264", f="mpegts").run(overwrite_output=True)
+            ffmpeg.output(audio, video, file_path, vcodec="libx264", f="mpegts").run(overwrite_output=True)
         case _:  # also mp4
-            ffmpeg.output(video, file_path).run(overwrite_output=True)
+            ffmpeg.output(audio, video, file_path).run(overwrite_output=True)
     print(f"{song.title} ffmpeg combine_audio_video output complete")
+    if remove:
+        os.remove(vid_path)
     return file_path
 
 
