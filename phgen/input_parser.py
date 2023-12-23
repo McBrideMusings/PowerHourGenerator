@@ -32,14 +32,14 @@ def parse_youtube(args: argparse.Namespace):
         title = args.title if args.title else yt.title
         artist = args.artist if args.artist else yt.author
         start_time = args.start_time if args.start_time else 0
-        song_list.append(PowerHourSong(title=title, artist=artist, start_time=start_time, link=args.input))
+        song_list.append(PowerHourSong(title=title, artist=artist, start_time=start_time, link=args.input, name=args.name))
     except Exception as e:
         print(e)
     return song_list
 
 
 def parse_video_file(args: argparse.Namespace):
-    return [PowerHourSong(title=args.title, artist=args.artist, start_time=args.start_time, link=args.input)]
+    return [PowerHourSong(title=args.title, artist=args.artist, start_time=args.start_time, link=args.input, name=args.name)]
 
 
 def parse_list(args: argparse.Namespace):

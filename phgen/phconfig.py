@@ -18,6 +18,8 @@ class PowerHourConfig:
                  font_border_color: str = "black",
                  title_start_time: float = 0.5,
                  title_duration: float = 5,
+                 name_duration: float = 5,
+                 name_format: str = "Added by {name}",
                  interstitial_text: str = "Drink!",
                  target_res: str = "1080p"):
         self.project_name = project_name
@@ -34,6 +36,8 @@ class PowerHourConfig:
         self.font_border_color = font_border_color
         self.title_start_time = title_start_time
         self.title_duration = title_duration
+        self.name_duration = name_duration
+        self.name_format = name_format
         self.font_file = font_file
         self.interstitial_text = interstitial_text
         self.target_res = target_res

@@ -166,6 +166,20 @@ def process_song_effects(config: PowerHourConfig, song: PowerHourSong, num: int,
                                 fontcolor=config.font_color,
                                 bordercolor=config.font_border_color,
                                 borderw=config.font_border_width)
+        if song.name and song.name != "":
+            name_start_time = fade_out_start_time - config.name_duration
+            name_end_time = fade_out_start_time
+            enable_name_expr = f'between(t,{name_start_time},{name_end_time})'
+            video = ffmpeg.drawtext(video,
+                                    text=config.name_format.format(name=song.name),
+                                    x=song_title_pos.get_x_expr(),
+                                    y=song_title_pos.get_y_expr(),
+                                    enable=enable_name_expr,
+                                    fontfile=config.get_full_font_path(),
+                                    fontsize=config.title_font_size,
+                                    fontcolor=config.font_color,
+                                    bordercolor=config.font_border_color,
+                                    borderw=config.font_border_width)
     if add_fade:
         video = ffmpeg.filter(video, 'fade', type="in", duration=config.fade_duration)
         video = ffmpeg.filter(video, 'fade', type="out", start_time=fade_out_start_time, duration=config.fade_duration)

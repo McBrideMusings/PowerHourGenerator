@@ -130,6 +130,15 @@ def parse_args(parser: argparse.ArgumentParser) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "-n",
+        "--name",
+        help=(
+            """\
+                Name of song picker if processing a single video or link
+            """
+        ),
+    )
+    parser.add_argument(
         "-d",
         "--dry_run",
         action="store_true",
