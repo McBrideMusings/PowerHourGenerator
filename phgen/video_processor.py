@@ -20,8 +20,6 @@ def download(config: PowerHourConfig, song: PowerHourSong, ext: str = "mp4",
 
     yt = YouTube(song.link, use_oauth=True)
     dir_path = config.get_dir_path()
-    print(dir_path)
-    file_path = os.path.join(dir_path, song.get_filename(ext, "clipped"))
 
     # download video only
     print(f"Getting Video Stream")
@@ -37,7 +35,7 @@ def download(config: PowerHourConfig, song: PowerHourSong, ext: str = "mp4",
 
     print(f"{song.title} Streams Downloaded")
     # combine
-    combine_audio_video(config, song, vid_path, aud_path, ext)
+    file_path = combine_audio_video(config, song, vid_path, aud_path, ext)
     return file_path
 
 
@@ -72,7 +70,7 @@ def scale_letterbox_video(scale: bool, letterbox: bool, target_res: str, vid_pat
 def combine_audio_video(config: PowerHourConfig, song: PowerHourSong, vid_path: str, aud_path: str, ext: str = "mp4"):
     # TODO Figure out how to upscale and pad in the same encoding, currently done seperately
     dir_path = config.get_dir_path()
-    file_path = os.path.join(dir_path, song.get_filename(ext, "clipped"))
+    file_path = os.path.join(dir_path, song.get_filename(ext, "combined"))
     video = ffmpeg.input(vid_path)
     audio = ffmpeg.input(aud_path)
 
@@ -123,7 +121,7 @@ def clip(config: PowerHourConfig, song: PowerHourSong, vid_path: str, ext: str =
 
 def process_song_effects(config: PowerHourConfig, song: PowerHourSong, num: int, vid_path: str,
                          ext: str = "mp4", add_text: bool = True, add_fade: bool = True, remove: bool = True):
-    print(f"{add_text} {add_fade}")
+    print(f"Process Song Effects - Text[{add_text}] Fade[{add_fade}] Remove[{remove}]")
     dir_path = config.get_dir_path()
     file_path = os.path.join(dir_path, song.get_filename(ext, "effects"))
 
@@ -167,6 +165,7 @@ def process_song_effects(config: PowerHourConfig, song: PowerHourSong, num: int,
                                 bordercolor=config.font_border_color,
                                 borderw=config.font_border_width)
         if song.name and song.name != "":
+            print(f"Adding name {song.name}")
             name_start_time = fade_out_start_time - config.name_duration
             name_end_time = fade_out_start_time
             enable_name_expr = f'between(t,{name_start_time},{name_end_time})'
