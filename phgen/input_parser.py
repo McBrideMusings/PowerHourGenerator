@@ -11,6 +11,7 @@ artist_key : str = "artist"
 start_time_key : str = "start_time"
 duration_key : str = "duration"
 link_key : str = "link"
+name_key : str = "name"
 
 
 def parse_input(args: argparse.Namespace):
@@ -45,7 +46,7 @@ def parse_video_file(args: argparse.Namespace):
 def parse_list(args: argparse.Namespace):
     pre, ext = os.path.splitext(args.input)
     song_list: list = []
-    with open(input) as textFile:
+    with open(args.input) as textFile:
         # TODO Latin characters like Í in ROSALÍA result in charparse error here. Fix that w/o losing the accent
         reader = csv.DictReader(textFile) if ext == "csv" else csv.DictReader(textFile, delimiter='\t')
         for row in reader:
@@ -55,6 +56,7 @@ def parse_list(args: argparse.Namespace):
             link = row[link_key]
             title = row[title_key] if title_key in row else "NaN"
             artist = row[artist_key] if artist_key in row else "NaN"
+            name = row[name_key] if name_key in row else ""
             start_time = row[start_time_key] if start_time_key in row else "0"
             start_time = parse_time(start_time, 0).seconds
             duration = row[duration_key] if duration_key in row else "60"
@@ -64,6 +66,7 @@ def parse_list(args: argparse.Namespace):
                 artist=artist.strip(),
                 start_time=start_time,
                 duration=duration,
+                name=name.strip(),
                 link=link)
             song_list.append(parsed)
     if len(song_list) == 0:
