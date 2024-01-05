@@ -11,7 +11,7 @@ class PowerHourConfig:
                  text_padding: float = 100,
                  text_padding_x: float = -1,
                  text_padding_y: float = -1,
-                 font_file: str = "",
+                 font_file: str = "Oswald.ttf",
                  font_color: str = "white",
                  font_size_scale: float = 1,
                  font_border_width: int = 5,
