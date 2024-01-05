@@ -2,6 +2,7 @@ def clean_string(text: str):
     text = text.replace(' ', '')
     text = text.replace('?', '')
     text = text.replace(',', '')
+    text = text.replace('*', '')
     return text
 
 
