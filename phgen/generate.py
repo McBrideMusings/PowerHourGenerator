@@ -42,7 +42,10 @@ def generate_list(songs: list, config: PowerHourConfig, start: int, length: int,
             continue
         try:
             # TODO Possibly add a way to check if the link is a path or url? (TBD)
-            generate_http(config, song, i, no_text=no_text, no_fade=no_fade, no_clip=no_clip)
+            if song.link.startswith("http"):
+                generate_http(config, song, i+1, no_text=no_text, no_fade=no_fade, no_clip=no_clip)
+            else:
+                generate_video(config, song, i+1, no_text=no_text, no_fade=no_fade, no_clip=no_clip)
         except Exception as e:
             print(f"Error on row {i} {song} - {e}")
 
