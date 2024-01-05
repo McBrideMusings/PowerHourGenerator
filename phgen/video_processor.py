@@ -113,7 +113,6 @@ def clip(config: PowerHourConfig, song: PowerHourSong, vid_path: str, ext: str =
             ffmpeg.output(audio, video, file_path, vcodec="libx264", f="mpegts").run(overwrite_output=True)
         case _:  # also mp4
             ffmpeg.output(audio, video, file_path).run(overwrite_output=True)
-    print(f"{song.title} ffmpeg combine_audio_video output complete")
     if remove:
         os.remove(vid_path)
     return file_path
@@ -121,10 +120,8 @@ def clip(config: PowerHourConfig, song: PowerHourSong, vid_path: str, ext: str =
 
 def process_song_effects(config: PowerHourConfig, song: PowerHourSong, num: int, vid_path: str,
                          ext: str = "mp4", add_text: bool = True, add_fade: bool = True, remove: bool = True):
-    print(f"Process Song Effects - Text[{add_text}] Fade[{add_fade}] Remove[{remove}]")
     dir_path = config.get_dir_path()
     file_path = os.path.join(dir_path, song.get_filename(ext, "effects"))
-
     ffmpeg_input = ffmpeg.input(vid_path)
     # dynamic values determined by both song and config params
     title_start_time = config.title_start_time
