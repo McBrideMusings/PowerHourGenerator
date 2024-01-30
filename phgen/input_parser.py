@@ -46,8 +46,7 @@ def parse_video_file(args: argparse.Namespace):
 def parse_list(args: argparse.Namespace):
     pre, ext = os.path.splitext(args.input)
     song_list: list = []
-    with open(args.input) as textFile:
-        # TODO Latin characters like Í in ROSALÍA result in charparse error here. Fix that w/o losing the accent
+    with open(args.input, 'r', encoding='utf-8') as textFile:
         reader = csv.DictReader(textFile) if ext == "csv" else csv.DictReader(textFile, delimiter='\t')
         for row in reader:
             if link_key not in row:
