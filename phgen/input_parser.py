@@ -80,8 +80,20 @@ def parse_time(time: str, default_result: int) -> timedelta:
         if ':' not in time:
             return timedelta(seconds=int(time))
         else:
-            t = datetime.strptime(time, "%M:%S")
-            return timedelta(minutes=t.minute, seconds=t.second)
+            result, passed = try_parse_time(time, "%M:%S")
+            if passed:
+                return result
+            result, passed = try_parse_time(time, "%H:%M:%S")
+            if passed:
+                return result
     except Exception as e:
         print(e)
-        return timedelta(seconds=default_result)
+    return timedelta(seconds=default_result)
+
+def try_parse_time(time: str, time_format: str) -> (timedelta, bool):
+    try:
+        t = datetime.strptime(time, time_format)
+        return timedelta(hours=t.hour, minutes=t.minute, seconds=t.second), True
+    except Exception as e:
+        print(e)
+    return timedelta(seconds=0), False
