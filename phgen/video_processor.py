@@ -1,6 +1,7 @@
 import os
 import ffmpeg
 import phgen.ffmpeg_utilities
+from phgen import ffmpeg_utilities
 from phgen.ffmpeg_utilities import VideoPos, PosAnchor
 import phgen.video_data
 from phgen.phconfig import PowerHourSong, PowerHourConfig
@@ -93,28 +94,22 @@ def clip(config: PowerHourConfig, song: PowerHourSong, vid_path: str, ext: str =
     dir_path = config.get_dir_path()
     file_path = os.path.join(dir_path, song.get_filename(ext, "clipped"))
     ffmpeg_input = ffmpeg.input(vid_path)
-    video = (
-            ffmpeg_input
-            .trim(start=song.start_time, end=song.end_time)
-            .setpts('PTS-STARTPTS') # I have no fucking idea if this is necessary
-        )
-    audio = (
-            ffmpeg_input
-            .filter_('atrim', start=song.start_time, end=song.end_time)
-            .filter_('asetpts', 'PTS-STARTPTS') # I have no fucking idea if this is necessary
-        )
-        
-    # non-mp4 stuff is broken as fuck fix me plz
-    match ext:
-        case "ts":
-            # converting to Transport Stream as intermediary because it supports concat and mp4 does not
-            # remove vcodec, format(f) and change path ending above if you want to switch to combine as mp4
-            # ffmpeg -i file1.mp4 -c copy -bsf:v h264_mp4toannexb -f mpegts fileIntermediate1.ts
-            ffmpeg.output(audio, video, file_path, vcodec="libx264", f="mpegts").run(overwrite_output=True)
-        case _:  # also mp4
-            ffmpeg.output(audio, video, file_path).run(overwrite_output=True)
+    vid = (
+        ffmpeg_input
+        .trim(start=song.start_time, end=song.end_time)
+        .setpts('PTS-STARTPTS')
+    )
+    aud = (
+        ffmpeg_input
+        .filter('atrim', start=song.start_time, end=song.end_time)
+        .filter('asetpts', 'PTS-STARTPTS')
+    )
+
+    output = ffmpeg.output(vid, aud, file_path, t=song.duration, vcodec='libx264', acodec='aac', strict='-2')
+    output.run()
     if remove:
         os.remove(vid_path)
+
     return file_path
 
 

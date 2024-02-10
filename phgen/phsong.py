@@ -14,7 +14,7 @@ class PowerHourSong:
         self.start_time = start_time
         self.link = link
         self.name = name
-        duration = max(3, duration) # at least 3 sec other wtf is the user even doing
+        self.duration = max(3, duration) # at least 3 sec other wtf is the user even doing
         self.end_time = start_time + duration
         self.title_start_time = start_time + 0.5
         self.title_end_time = self.title_start_time + 5
