@@ -104,8 +104,12 @@ def clip(config: PowerHourConfig, song: PowerHourSong, vid_path: str, ext: str =
         .filter('atrim', start=song.start_time, end=song.end_time)
         .filter('asetpts', 'PTS-STARTPTS')
     )
-
-    output = ffmpeg.output(vid, aud, file_path, t=song.duration, vcodec='libx264', acodec='aac', strict='-2')
+    output = ffmpeg.output(
+        vid, aud, file_path,
+        vcodec='libx264', acodec='aac', ac=2, strict='-2', pix_fmt='yuv420p', crf=23,
+        metadata='title=' + song.title,
+        **{'map_chapters': -1}  # Strip chapter data
+    )
     output.run()
     if remove:
         os.remove(vid_path)
