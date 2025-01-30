@@ -3,8 +3,6 @@ import csv
 import argparse
 from datetime import datetime, timedelta
 from phgen.phsong import PowerHourSong
-from pytube import YouTube
-
 
 title_key : str = "title"
 artist_key : str = "artist"

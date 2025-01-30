@@ -5,7 +5,7 @@ from phgen import ffmpeg_utilities
 from phgen.ffmpeg_utilities import VideoPos, PosAnchor
 import phgen.video_data
 from phgen.phconfig import PowerHourSong, PowerHourConfig
-from pytube import YouTube, StreamQuery
+from yt_dlp import YoutubeDL
 
 interstitial_filename = "interstitial"
 
@@ -19,20 +19,20 @@ def download(config: PowerHourConfig, song: PowerHourSong, ext: str = "mp4",
     print(f"Starting Download {song.title} by {song.artist}")
     ext = phgen.ffmpeg_utilities.get_file_format_ext(ext)
 
-    yt = YouTube(song.link, use_oauth=True)
-    dir_path = config.get_dir_path()
+    ydl_opts = {
+        'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]',
+        'outtmpl': os.path.join(config.get_dir_path(), '%(title)s.%(ext)s'),
+        'merge_output_format': ext,
+        'postprocessors': [{
+            'key': 'FFmpegVideoConvertor',
+            'preferedformat': ext
+        }]
+    }
 
-    # download video only
-    print(f"Getting Video Stream")
-    vid_stream, found_res = get_highest_stream_resolution(yt.streams, target_res=target_res)
-    print(f"Best Video Stream {vid_stream}")
-    vid_path = vid_stream.download(output_path=dir_path, filename="video.mp4")
-
-    # download audio only
-    print(f"Getting Audio Stream")
-    aud_stream = yt.streams.filter(only_audio=True, progressive=False).order_by("abr").last()
-    print(f"Best Audio Stream {aud_stream}")
-    aud_path = aud_stream.download(output_path=dir_path, filename="audio.mp4")
+    with YoutubeDL(ydl_opts) as ydl:
+        info_dict = ydl.extract_info(song.uri, download=True)
+        vid_path = ydl.prepare_filename(info_dict)
+        aud_path = vid_path.replace('.mp4', '.m4a')
 
     print(f"{song.title} Streams Downloaded")
     # combine
@@ -91,6 +91,7 @@ def combine_audio_video(config: PowerHourConfig, song: PowerHourSong, vid_path: 
 
 def clip(config: PowerHourConfig, song: PowerHourSong, vid_path: str, ext: str = "mp4", remove: bool=True):
     # TODO Figure out how to upscale and pad in the same encoding, currently done seperately
+    print(f"vid_path {vid_path}")
     dir_path = config.get_dir_path()
     file_path = os.path.join(dir_path, song.get_filename(ext, "clipped"))
     ffmpeg_input = ffmpeg.input(vid_path)
@@ -277,13 +278,3 @@ def should_scale_letterbox(res: str, vid_path: str):
     else:
         letterbox = True
     return scale, letterbox
-
-
-def get_highest_stream_resolution(streams: StreamQuery, target_res: str = ""):
-    streams = streams.filter(adaptive=True).order_by("resolution")
-    stream = streams.filter(subtype="mp4", resolution=target_res).first()
-    if stream is not None:
-        return stream, target_res
-    else:
-        stream = streams.last()
-        return stream, stream.resolution

@@ -9,7 +9,7 @@ setup(
         ]
     },
     install_requires=[
-        'pytube',
+        'yt_dlp',
         'ffmpeg-python'
     ]
 )
