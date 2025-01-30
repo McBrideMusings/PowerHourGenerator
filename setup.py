@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='PowerHourGenerator',
-    version='0.1.0',
+    version='0.2.0',
     entry_points={
         'console_scripts': [
             'phgen = phgen.cli:main'
@@ -11,7 +11,8 @@ setup(
     install_requires=[
         'yt_dlp',
         'ffmpeg-python'
-    ]
+    ],
+    python_requires='>=3.10'
 )
 
 
