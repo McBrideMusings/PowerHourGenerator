@@ -12,7 +12,10 @@ class PowerHourSong:
         self.title = title
         self.artist = artist
         self.start_time = start_time
-        self.link = link
+        if link.startswith('http'):
+            self.uri = link
+        else:
+            self.uri = link.strip('"').strip("'")
         self.name = name
         self.duration = max(3, duration) # at least 3 sec other wtf is the user even doing
         self.end_time = start_time + duration
@@ -20,7 +23,7 @@ class PowerHourSong:
         self.title_end_time = self.title_start_time + 5
 
     def __str__(self):
-        return f"SongChoice({self.title}, {self.artist}, {self.start_time}, {self.end_time}, {self.link})"
+        return f"SongChoice({self.title}, {self.artist}, {self.start_time}, {self.end_time}, {self.uri})"
 
     def get_filename(self, file_ending: str = "mp4", *extras: str):
         title = clean_string(self.title)

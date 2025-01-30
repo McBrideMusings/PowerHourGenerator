@@ -42,7 +42,7 @@ def generate_list(songs: list, config: PowerHourConfig, start: int, length: int,
             continue
         try:
             # TODO Possibly add a way to check if the link is a path or url? (TBD)
-            if song.link.startswith("http"):
+            if song.uri.startswith("http"):
                 generate_http(config, song, i+1, no_text=no_text, no_fade=no_fade, no_clip=no_clip)
             else:
                 generate_video(config, song, i+1, no_text=no_text, no_fade=no_fade, no_clip=no_clip)
@@ -52,7 +52,7 @@ def generate_list(songs: list, config: PowerHourConfig, start: int, length: int,
 def generate_video(config : PowerHourConfig, song : PowerHourSong, num : int, no_text: bool=False, no_fade: bool=False, no_clip: bool=False, remove: bool=True):
     try:
         if not no_clip:
-            video_path = phgen.video_processor.clip(config, song, song.link, remove=False)
+            video_path = phgen.video_processor.clip(config, song, song.uri, remove=False)
         video_path = process_video(video_path, config, song, num, no_fade=no_fade, no_text=no_text, remove_src=remove)
         create_file(video_path, config, song, num)
     except Exception as e:
